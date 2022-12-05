@@ -15,6 +15,12 @@ class MelodyEditor extends React.Component{
 	componentDidMount(){
 	}
 
+	setTone(id,tone){
+		let newNotes = this.state.notes;
+		newNotes[id].tone=tone;
+		this.setState({notes:newNotes});
+	}
+
 	play(){
 		this.player.play(this.state.notes);
 	}
@@ -25,6 +31,11 @@ class MelodyEditor extends React.Component{
 	render(){
 		return (
 			<div>
+				<Notation
+					editor={this}
+					notes={this.state.notes}
+					setTone={this.setTone.bind(this)}
+				></Notation>
 			</div>
 		);
 	};

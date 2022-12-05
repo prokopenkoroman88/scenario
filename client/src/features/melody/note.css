@@ -1,0 +1,121 @@
+
+
+.notation{
+	background-color: white;
+	position: relative;
+	height: 200px;
+	width: 90%;
+}
+
+.line{
+	background-color: black;
+	height: 1px;
+	width: calc(100% - 50px);
+	position: absolute;
+	left:45px;
+}
+
+
+.note{
+	display: inline-block;
+	position: relative;
+	height: 30px;
+	width: 12px;
+	border: 1px solid lightgray;
+	margin: auto 5px;
+
+}
+
+.note div{
+	margin-top: 10px;
+	border-radius: 50%;
+	height: 9px;
+	width: 12px;
+	border: black 1px solid;
+	background-color: black;
+}
+
+.note.d_1 div,
+.note.d_1_2 div
+{
+	background-color: transparent;
+}
+
+.note.diese div:after{
+	display: block;
+	width: 13px;
+	height: 13px;
+	content: '♯';
+	position: absolute;
+	top:-50%;
+	
+}
+
+
+.note div:before{
+	display: block;
+	width: 36px;
+	height: 13px;
+	/*border:1px solid red;*/
+	overflow: hidden;
+	border-bottom: 1px solid black;
+	text-align: left;
+	/*text-decoration: underline;*/
+	/*font-style: italic;*/
+	/*font-size: 12px;*/
+	content: '';
+	/*content: '{{{';/**/
+	/*content:'&#119133;';*/
+	/*content:'\1d15f';*/
+	transform-origin: 50% 100%;
+	transform: rotate(90deg) translateX(-28px) translateY(6px) skewX(-20deg);
+}
+
+
+.note.d_1 div:before
+{
+	opacity: 0%;
+}
+
+
+.note.d_1_8 div:before{
+	content: '{';
+}
+
+.note.d_1_16 div:before{
+	content: '{{';
+}
+
+.note.d_1_32 div:before{
+	content: '{{{';
+}
+
+/*
+.note:before{
+	display: block;
+	width: 18px;
+	height: 18px;
+	content: '\2669';
+
+}
+*/
+
+button.active{
+	background-color: blue;
+}
+
+
+.note.active{
+	color:blue;
+}
+
+.note.active div{
+	color:blue;
+	background-color: blue;
+	border-color:blue;
+}
+
+.note.active div:before{
+	color:blue;
+	border-color:blue;
+}

@@ -48,10 +48,47 @@ class Player{
 		// So be sure to re-use them whenever you can
 		this.myAudioContext = new AudioContext();
 		this.notes=[];
+
+		// Set the type of oscillator
+		this.oscillatorType='sine';//sine,square,sawtooth,triangle
+		this.waveList=[];
+
+		this.addPeriodicWave('my new',[1,0,0,1,0,0]);
+		this.addPeriodicWave('my second',[0.3,1,1,0,0.4,0]);
+		//this.oscillatorType='custom';
+		this.selectPeriodicWave('my new');//second
 	}
 
 
+	addPeriodicWave(name, harmonics){
+		let periodicWave={
+			name:name,
+			real: new Float32Array(harmonics.length+1),
+			imag: new Float32Array(harmonics.length+1),
+			wave:null,
+		};
 
+		harmonics.map((harmonic,index)=>{
+			periodicWave.real[index+1] = harmonic;
+			periodicWave.imag[index+1] = 0;
+		});
+
+		periodicWave.real[0] = 0;
+		periodicWave.imag[0] = 0;
+		periodicWave.wave = this.myAudioContext.createPeriodicWave(periodicWave.real, periodicWave.imag);
+
+		return this.waveList.push(periodicWave);
+	}
+
+	selectPeriodicWave(name){
+		this.waveList.forEach( (wave)=>{
+			if(wave.name==name)
+				this.wave=wave.wave;
+		}, this);
+		if(this.wave)
+			this.oscillatorType='custom';
+		return this.wave;
+	}
 
 /**
  * Helper function to emit a beep sound in the browser using the Web Audio API.
@@ -73,8 +110,13 @@ class Player{
 				let oscillatorNode = this.myAudioContext.createOscillator();
 				let gainNode = this.myAudioContext.createGain();
 
-				// Set the type of oscillator
-				oscillatorNode.type='sine';
+				if(this.oscillatorType=='custom'){
+					oscillatorNode.setPeriodicWave(this.wave);
+				}
+				else{
+					// Set the type of oscillator
+					oscillatorNode.type=this.oscillatorType;//square,sine,sawtooth,triangle
+				};
 
 				oscillatorNode.connect(gainNode);
 				gainNode.connect(this.myAudioContext.destination);
