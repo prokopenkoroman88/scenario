@@ -59,6 +59,10 @@ class Player{
 		this.selectPeriodicWave('my new');//second
 	}
 
+	mayDiese(tone){//1..14
+		tone = (tone-1)%7;
+		return notes_dieses[tone][0]<notes_dieses[tone][1];
+	}
 
 	addPeriodicWave(name, harmonics){
 		let periodicWave={

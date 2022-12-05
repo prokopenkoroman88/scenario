@@ -36,6 +36,7 @@ class Notation extends React.Component{
 						key={'note_'+index}
 						note={note}
 						setTone={this.props.setTone}
+						selectNote={this.props.selectNote}
 						editor={this.props.editor}
 					></Note>
 				)}
