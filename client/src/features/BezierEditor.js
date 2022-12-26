@@ -36,6 +36,26 @@ class BezierEditor extends React.Component{
 		console.log('bezier',this.bezier);
 	}
 
+	handleClickPaint(){
+		this.bezier.paint();
+	}
+
+	handleMouse(event){
+		let x=event.offsetX;
+		let y=event.offsetY;
+		//event.altKey, event.ctrlKey, event.shiftKey
+		switch (event.type) {
+			case 'mousedown':
+				break;
+			case 'mousemove':
+				break;
+			case 'mouseup':
+				break;
+			default:
+				break;
+		};
+	}
+
 	componentWilUnmount(){
 		//delay={125*10.00020}
 	}
@@ -44,9 +64,15 @@ class BezierEditor extends React.Component{
 		return (
 			<div>
 				<h1>Bezier Editor</h1>
+				<div>
+					<button
+						onClick={this.handleClickPaint.bind(this)}
+					>paint</button>
+				</div>
 				<Screen
 					rect={this.state.rect}
 					getCanvas={this.handleGetCanvas.bind(this)}
+					onMouse={this.handleMouse.bind(this)}
 				></Screen>
 			</div>
 		);
