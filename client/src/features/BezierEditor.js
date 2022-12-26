@@ -1,23 +1,53 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
+import { Bezier } from './bezier/Bezier.js';
+import Screen from './bezier/Screen.js';
+
 
 class BezierEditor extends React.Component{
 	constructor(props){
 		super(props);
 		this.state={
+			rect:{
+				height : 600,
+				width : 1000,
+			},
+			// cnv:{
+			// 	ref:null,
+			// 	obj:null,
+			// },
 		};
 		console.log('BezierEditor.constructor');
+		this.cnv = {
+			ref:null,
+			obj:null,
+		};
 	}
 
 	componentDidMount(){
+		console.log('componentDidMount',this.state.ref,this.cnv.ref);
+	}
+
+	handleGetCanvas(ref,obj){
+		this.cnv.ref=ref;
+		this.cnv.obj=obj;
+		this.bezier = new Bezier(this.cnv.obj);
+		console.log('cnv:  ',this.cnv);
+		console.log('bezier',this.bezier);
 	}
 
 	componentWilUnmount(){
+		//delay={125*10.00020}
 	}
 
 	render(){
 		return (
-			<div>Bezier Editor
+			<div>
+				<h1>Bezier Editor</h1>
+				<Screen
+					rect={this.state.rect}
+					getCanvas={this.handleGetCanvas.bind(this)}
+				></Screen>
 			</div>
 		);
 	};

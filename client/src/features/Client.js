@@ -16,6 +16,10 @@ class Client extends React.Component{
 	componentDidMount(){
 	}
 
+	handleMode(name){
+		this.setState({mode:name});
+	}
+
 	componentWilUnmount(){
 	}
 
@@ -25,6 +29,7 @@ class Client extends React.Component{
 				{(this.state.mode=='MainBoard') &&
 					<MainBoard
 						client={this}
+						handleMode={this.handleMode.bind(this)}
 					>
 					</MainBoard>
 				}

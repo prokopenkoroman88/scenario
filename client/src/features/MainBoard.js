@@ -13,7 +13,7 @@ class MainBoard extends React.Component{
 	}
 
 	handleClickMode(name){
-		this.props.client.setState({mode:name});
+		this.props.handleMode(name);
 	}
 
 	componentWilUnmount(){
