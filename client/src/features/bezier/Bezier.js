@@ -323,6 +323,199 @@ class Editor{
 };
 
 
+class Render{
+	constructor(owner, canvas=null){
+		this.owner=owner;
+		this.canvas=canvas;
+	}
+
+	get content(){ return this.owner.content; }
+
+	paint(canvas=null, rect=null){
+		if(canvas)
+			this.canvas=canvas;
+
+		if(!rect)
+			rect={
+				top:0,
+				bottom:this.canvas.height-1,
+				left:0,
+				right:this.canvas.width-1,
+			};
+
+		this.prepare();
+		for(let y=rect.top; y<=rect.bottom; y++){
+			this.prepare_vert(y);
+			for(let x=rect.left; x<=rect.right; x++){
+				this.prepare_horiz(x);
+				let rgba = this.prepare_color(x,y);
+				this.canvas.setRGB(x,y,rgba);
+			};//x++
+		};//y++
+		this.canvas.put();
+	}
+
+	prepare(){
+		function dist(p1,p2){
+			return distance(p1.x,p1.y, p2.x,p2.y);
+		};
+
+		this.rows = new Array(this.canvas.height);
+		for(let i=0; i<this.rows.length; i++)
+			this.rows[i]={
+				lines:[],
+			};
+		this.currLines=[];
+		const line_length=10;
+
+		this.content.layers.forEach( (layer, iLayer) => {
+			layer.figures.forEach( (figure, iFigure) => {
+				figure.splines.forEach( (spline, iSpline) => {
+					let points = spline.points;
+
+					let c=0;
+					for(let i=1; i<points.length; i++)
+						c+=dist(points[i-1],points[i]);
+
+					let oldPoint, newPoint=points[0];
+					let oldDot, newDot=newPoint;
+					let oldDist, newDist=0;
+
+					for(let i=1; i<=c; i++){
+						oldPoint = newPoint;
+						oldDist = newDist;
+
+						newPoint = findInterimBezierPoint(points, i/c);
+						newDist=dist(newDot,newPoint);
+
+						while(newDist>=line_length){
+							let distL = line_length-oldDist;
+							let distR = newDist-line_length;
+							oldDot = newDot;
+							newDot = findInterimPoint(oldPoint, newPoint, distL/(distL + distR)/2 );
+							newDot.x = Math.round(newDot.x);
+							newDot.y = Math.round(newDot.y);
+							let dot;
+							let line = { dot1:oldDot, dot2:newDot, spline:spline, };
+
+							if(line.dot1.y==line.dot2.y){
+								//line begins and ends on one row
+								dot=line.dot1.x<line.dot2.x?line.dot1:line.dot2;
+								this.rows[dot.y].lines.push({line:line, x:dot.x, left:true});
+								dot=line.dot1.x<line.dot2.x?line.dot2:line.dot1;
+								this.rows[dot.y].lines.push({line:line, x:dot.x, right:true});
+							}
+							else{
+								//line begins and ends on different rows
+								dot=line.dot1.y<line.dot2.y?line.dot1:line.dot2;
+								this.rows[dot.y].lines.push({line:line, x:dot.x, top:true});
+								dot=line.dot1.y<line.dot2.y?line.dot2:line.dot1;
+								this.rows[dot.y].lines.push({line:line, x:dot.x, bottom:true});
+							};
+
+							newDist=dist(newDot,newPoint);
+						};
+						//this.paintPoint(newPoint,rgba);
+					};///i++
+
+				},this);//spline
+			},this);//figure
+		},this);//layer
+	}
+
+	prepare_vert(y){
+		//sort lines by y:
+		this.rows[y].lines.sort((line1,line2)=>{ return line1.x-line2.x});
+
+		//adding of curr lines:
+		this.rows[y].lines.forEach( function(line, index) {
+			if(line.top || line.left)
+				this.currLines.push(line.line);
+		},this);
+
+
+		//find crosses by row y
+		this.crosses = this.currLines.map((line, index)=>{
+			let coeff;
+			let calced_x;
+
+			if(line.dot2.y>line.dot1.y){
+				coeff = (y-line.dot1.y)/ (line.dot2.y-line.dot1.y);
+				calced_x = line.dot1.x + (line.dot2.x-line.dot1.x) * coeff;
+			}
+			else if(line.dot2.y<line.dot1.y){
+				coeff = (y-line.dot2.y)/ (line.dot1.y-line.dot2.y);
+				calced_x = line.dot2.x + (line.dot1.x-line.dot2.x) * coeff;
+			}
+			else{
+				coeff = 0;
+				calced_x = Math.min(line.dot1.x,line.dot2.x);
+			};
+
+			return {
+				line:line,
+				x:Math.round(calced_x),
+				//curve:,
+			};
+		}, this);
+		this.crosses.sort((cross1,cross2)=>{ return cross1.x-cross2.x });
+
+		//deleting of old curr lines:
+		this.rows[y].lines.forEach( function(line, index) {
+			if(line.bottom || line.right){
+				let iDel=this.currLines.indexOf(line.line);
+				if(iDel>=0)
+					this.currLines.splice(iDel, 1);
+			};
+		},this);
+
+		this.index_x=-1;
+	}
+
+	prepare_horiz(x){
+		this.is_line=false;
+		while((this.index_x+1<this.crosses.length) && (this.crosses[this.index_x+1].x <= x)){
+			this.index_x++;
+			//Curves that are bounded by these lines
+			//this.crosses[this.index_x+1].curve
+			this.is_line=true;
+		};
+	}
+
+	prepare_color(x,y){
+		let rgba=[0,0,0,155];
+		if(this.is_line)
+			rgba=[230,190,80,55];
+		return rgba;
+	}
+
+
+	//applications
+	paintPoint(point,rgba){
+			let x=Math.round(point.x);
+			let y=Math.round(point.y);
+			this.canvas.setRGB(x,y,rgba);
+	}
+
+	paintBezier(aDot, color){//PixelColor color
+		let rgba=Array.isArray(color)?color:color.toArray();
+
+		let oldPoint, newPoint=aDot[0];
+		let c=0;
+		for(let i=1;i<aDot.length;i++)
+			c+=distance(aDot[i-1].x,aDot[i-1].y,aDot[i].x,aDot[i].y);
+
+		for(let i=1; i<=c; i++){
+			oldPoint = newPoint;
+			newPoint = findInterimBezierPoint(aDot, i/c);
+			this.paintPoint(newPoint,rgba);
+		};
+		//this.canvas.put();
+	}
+
+};
+
+
 class Bezier{
 
 	constructor(canvas=null){
@@ -331,9 +524,11 @@ class Bezier{
 			layers : [],
 		};
 		this.editor = new Editor(this);
+		this.render = new Render(this);
 	}
 
 	paint(){
+		this.render.paint(this.canvas);
 	}
 
 };
