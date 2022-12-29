@@ -393,24 +393,33 @@ class Render{
 							let distR = newDist-line_length;
 							oldDot = newDot;
 							newDot = findInterimPoint(oldPoint, newPoint, distL/(distL + distR)/2 );
-							newDot.x = Math.round(newDot.x);
-							newDot.y = Math.round(newDot.y);
-							let dot;
-							let line = { dot1:oldDot, dot2:newDot, spline:spline, };
+							//newDot.x = Math.round(newDot.x);
+							//newDot.y = Math.round(newDot.y);
 
-							if(line.dot1.y==line.dot2.y){
-								//line begins and ends on one row
-								dot=line.dot1.x<line.dot2.x?line.dot1:line.dot2;
-								this.rows[dot.y].lines.push({line:line, x:dot.x, left:true});
-								dot=line.dot1.x<line.dot2.x?line.dot2:line.dot1;
-								this.rows[dot.y].lines.push({line:line, x:dot.x, right:true});
+							let line;
+							let delta_y = Math.sign(newDot.y-oldDot.y);
+							let delta_x = Math.sign(newDot.x-oldDot.x);
+							if(delta_y<0 || (delta_y==0 && delta_x<0))
+								line={dot1:newDot, dot2:oldDot};
+							if(delta_y>0 || (delta_y==0 && delta_x>0))
+								line={dot1:oldDot, dot2:newDot};
+							if(delta_y==0 && delta_x==0)
+								continue;
+							line.spline=spline;
+							let width=spline.controlPoint[0].width + (spline.controlPoint[1].width-spline.controlPoint[0].width)*(i/c);
+							let sin = Math.sin(Math.atan2(line.dot2.y-line.dot1.y, line.dot2.x-line.dot1.x));
+							if(sin==0)
+								line.width_x = width + Math.abs( line.dot2.x-line.dot1.x );
+							else
+								line.width_x = width / Math.abs( sin );
+
+							if(delta_y==0){
+								this.rows[Math.round(line.dot1.y)].lines.push({line:line, x:line.dot1.x, left:true});
+								this.rows[Math.round(line.dot2.y)].lines.push({line:line, x:line.dot2.x, right:true});
 							}
 							else{
-								//line begins and ends on different rows
-								dot=line.dot1.y<line.dot2.y?line.dot1:line.dot2;
-								this.rows[dot.y].lines.push({line:line, x:dot.x, top:true});
-								dot=line.dot1.y<line.dot2.y?line.dot2:line.dot1;
-								this.rows[dot.y].lines.push({line:line, x:dot.x, bottom:true});
+								this.rows[Math.round(line.dot1.y)].lines.push({line:line, x:line.dot1.x, top:true});
+								this.rows[Math.round(line.dot2.y)].lines.push({line:line, x:line.dot2.x, bottom:true});
 							};
 
 							newDist=dist(newDot,newPoint);
@@ -439,22 +448,18 @@ class Render{
 			let coeff;
 			let calced_x;
 
-			if(line.dot2.y>line.dot1.y){
+			try {
 				coeff = (y-line.dot1.y)/ (line.dot2.y-line.dot1.y);
-				calced_x = line.dot1.x + (line.dot2.x-line.dot1.x) * coeff;
-			}
-			else if(line.dot2.y<line.dot1.y){
-				coeff = (y-line.dot2.y)/ (line.dot1.y-line.dot2.y);
-				calced_x = line.dot2.x + (line.dot1.x-line.dot2.x) * coeff;
-			}
-			else{
+			} catch(e) {
 				coeff = 0;
-				calced_x = Math.min(line.dot1.x,line.dot2.x);
 			};
+			calced_x = line.dot1.x + (line.dot2.x-line.dot1.x) * coeff;
 
 			return {
 				line:line,
 				x:Math.round(calced_x),
+				left_x:Math.round(calced_x-line.width_x/2),
+				right_x:Math.round(calced_x+line.width_x/2),
 				//curve:,
 			};
 		}, this);
@@ -473,8 +478,8 @@ class Render{
 	}
 
 	prepare_horiz(x){
-		this.is_line=false;
-		while((this.index_x+1<this.crosses.length) && (this.crosses[this.index_x+1].x <= x)){
+		this.is_line=(this.index_x>=0 && this.crosses[this.index_x].right_x >= x);
+		while((this.index_x+1<this.crosses.length) && (this.crosses[this.index_x+1].left_x <= x)){
 			this.index_x++;
 			//Curves that are bounded by these lines
 			//this.crosses[this.index_x+1].curve
