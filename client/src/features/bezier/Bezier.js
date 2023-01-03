@@ -86,6 +86,17 @@ class Spline extends FigureItem{
 		return arr;
 	}
 
+	get curves(){
+		//find curves of spline:
+		let spline_curves=[];
+		let spline=this;
+		this.ownFigure.curves.forEach( (curve)=>{
+			if(curve.splines.indexOf(spline)>=0)
+				spline_curves.push(curve);
+		});
+		return spline_curves;
+	}
+
 	isNear(x,y){
 		let oldPoint, newPoint=this.points[0];
 		let c=0;
@@ -380,6 +391,33 @@ class Render{
 					let oldPoint, newPoint=points[0];
 					let oldDot, newDot=newPoint;
 					let oldDist, newDist=0;
+					function addLine(coeff=1){
+							let line;
+							let delta_y = Math.sign((newDot.y-oldDot.y).toFixed(0));
+							let delta_x = Math.sign((newDot.x-oldDot.x).toFixed(0));
+							if(delta_y<0 || (delta_y==0 && delta_x<0))
+								line={dot1:newDot, dot2:oldDot};
+							if(delta_y>0 || (delta_y==0 && delta_x>0))
+								line={dot1:oldDot, dot2:newDot};
+							if(delta_y==0 && delta_x==0)
+								return;
+							line.spline=spline;
+							let width=spline.controlPoint[0].width + (spline.controlPoint[1].width-spline.controlPoint[0].width)*coeff;
+							let sin = Math.sin(Math.atan2(line.dot2.y-line.dot1.y, line.dot2.x-line.dot1.x));
+							if(Math.abs(sin)<=0.1)
+								line.width_x = width + Math.abs( line.dot2.x-line.dot1.x );
+							else
+								line.width_x = width / Math.abs( sin );
+
+							if(delta_y==0){
+								this.rows[Math.round(line.dot1.y)].lines.push({line:line, x:line.dot1.x, left:true});
+								this.rows[Math.round(line.dot2.y)].lines.push({line:line, x:line.dot2.x, right:true});
+							}
+							else{
+								this.rows[Math.round(line.dot1.y)].lines.push({line:line, x:line.dot1.x, top:true});
+								this.rows[Math.round(line.dot2.y)].lines.push({line:line, x:line.dot2.x, bottom:true});
+							};
+					};
 
 					for(let i=1; i<=c; i++){
 						oldPoint = newPoint;
@@ -393,39 +431,16 @@ class Render{
 							let distR = newDist-line_length;
 							oldDot = newDot;
 							newDot = findInterimPoint(oldPoint, newPoint, distL/(distL + distR)/2 );
-							//newDot.x = Math.round(newDot.x);
-							//newDot.y = Math.round(newDot.y);
-
-							let line;
-							let delta_y = Math.sign(newDot.y-oldDot.y);
-							let delta_x = Math.sign(newDot.x-oldDot.x);
-							if(delta_y<0 || (delta_y==0 && delta_x<0))
-								line={dot1:newDot, dot2:oldDot};
-							if(delta_y>0 || (delta_y==0 && delta_x>0))
-								line={dot1:oldDot, dot2:newDot};
-							if(delta_y==0 && delta_x==0)
-								continue;
-							line.spline=spline;
-							let width=spline.controlPoint[0].width + (spline.controlPoint[1].width-spline.controlPoint[0].width)*(i/c);
-							let sin = Math.sin(Math.atan2(line.dot2.y-line.dot1.y, line.dot2.x-line.dot1.x));
-							if(sin==0)
-								line.width_x = width + Math.abs( line.dot2.x-line.dot1.x );
-							else
-								line.width_x = width / Math.abs( sin );
-
-							if(delta_y==0){
-								this.rows[Math.round(line.dot1.y)].lines.push({line:line, x:line.dot1.x, left:true});
-								this.rows[Math.round(line.dot2.y)].lines.push({line:line, x:line.dot2.x, right:true});
-							}
-							else{
-								this.rows[Math.round(line.dot1.y)].lines.push({line:line, x:line.dot1.x, top:true});
-								this.rows[Math.round(line.dot2.y)].lines.push({line:line, x:line.dot2.x, bottom:true});
-							};
+							addLine.bind(this)(i/c);
 
 							newDist=dist(newDot,newPoint);
 						};
 						//this.paintPoint(newPoint,rgba);
 					};///i++
+					//last part:
+					oldDot = newDot;
+					newDot = points[ points.length-1 ];
+					addLine.bind(this)(1);
 
 				},this);//spline
 			},this);//figure
@@ -440,6 +455,11 @@ class Render{
 		this.rows[y].lines.forEach( function(line, index) {
 			if(line.top || line.left)
 				this.currLines.push(line.line);
+			if(line.bottom){
+				let iDel=this.currLines.indexOf(line.line);
+				if(iDel>=0)
+					this.currLines.splice(iDel, 1);
+			};
 		},this);
 
 
@@ -448,11 +468,10 @@ class Render{
 			let coeff;
 			let calced_x;
 
-			try {
+			if( Math.round(line.dot1.y)==Math.round(line.dot2.y) )
+				coeff=0.5;
+			else
 				coeff = (y-line.dot1.y)/ (line.dot2.y-line.dot1.y);
-			} catch(e) {
-				coeff = 0;
-			};
 			calced_x = line.dot1.x + (line.dot2.x-line.dot1.x) * coeff;
 
 			return {
@@ -465,9 +484,42 @@ class Render{
 		}, this);
 		this.crosses.sort((cross1,cross2)=>{ return cross1.x-cross2.x });
 
+		//curves:
+		this.row_curves=[];
+		this.crosses.forEach( (cross, index)=>{
+			let spline_curves = cross.line.spline.curves;
+			if(index==0){
+				this.row_curves.push(...spline_curves);
+				cross.next_curve = spline_curves[0];
+			}
+			else{
+				spline_curves.forEach( function(spline_curve, index) {
+					// statements
+					let i = this.row_curves.indexOf(spline_curve);
+					if(i<0){
+						cross.next_curve = spline_curve;//open new
+						this.row_curves.push(spline_curve);
+					}
+					else{
+						//if(spline_curve!=cross.next_curve){
+						if(index==0 || Math.abs( this.crosses[index-1].right_x - cross.left_x )>5 ){//????????????
+							cross.last_curve = spline_curve;//close old
+							this.row_curves.splice(i, 1);
+						};
+					};
+				},this);
+			};
+
+		},this);
+		//clean upper crosses:
+		for (let i = this.crosses.length - 1; i >= 0; i--) {
+			if(this.crosses[i].line.dot1.y<y && this.crosses[i].line.dot2.y<y)
+				this.crosses.splice(i,1);
+		};
+
 		//deleting of old curr lines:
 		this.rows[y].lines.forEach( function(line, index) {
-			if(line.bottom || line.right){
+			if(line.right){
 				let iDel=this.currLines.indexOf(line.line);
 				if(iDel>=0)
 					this.currLines.splice(iDel, 1);
@@ -475,14 +527,22 @@ class Render{
 		},this);
 
 		this.index_x=-1;
+		this.row_curves=[];
 	}
 
 	prepare_horiz(x){
+		if(this.is_line && this.index_x>=0 && this.crosses[this.index_x].right_x == x){
+			if(this.crosses[this.index_x].next_curve)
+				this.row_curves.push( this.crosses[this.index_x].next_curve );
+		};
 		this.is_line=(this.index_x>=0 && this.crosses[this.index_x].right_x >= x);
 		while((this.index_x+1<this.crosses.length) && (this.crosses[this.index_x+1].left_x <= x)){
 			this.index_x++;
 			//Curves that are bounded by these lines
 			//this.crosses[this.index_x+1].curve
+			let iCurve = this.row_curves.indexOf(this.crosses[this.index_x].last_curve);
+			if(iCurve>=0)
+				this.row_curves.splice(iCurve, 1);//не обов'язково стек
 			this.is_line=true;
 		};
 	}
@@ -491,6 +551,12 @@ class Render{
 		let rgba=[0,0,0,155];
 		if(this.is_line)
 			rgba=[230,190,80,55];
+		else if (this.row_curves.length>0) {
+			let i=this.row_curves.length;
+			i--;
+			if(i>=0)
+				rgba=this.row_curves[i].color;
+		}
 		return rgba;
 	}
 
