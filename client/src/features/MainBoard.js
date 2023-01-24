@@ -29,6 +29,9 @@ class MainBoard extends React.Component{
 					onClick={ ((e)=>{this.handleClickMode('BezierEditor'); }) }
 				>BezierEditor</button>
 				<button
+					onClick={ ((e)=>{this.handleClickMode('NeuralEditor'); }) }
+				>NeuralEditor</button>
+				<button
 					onClick={ ((e)=>{this.handleClickMode('MelodyEditor'); }) }
 				>MelodyEditor</button>
 			</div>

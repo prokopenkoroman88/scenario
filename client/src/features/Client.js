@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import MainBoard from './MainBoard.js'
 import ScenarioEditor from './ScenarioEditor.js'
 import BezierEditor from './BezierEditor.js'
+import NeuralEditor from './NeuralEditor.js'
 import MelodyEditor from './MelodyEditor.js'
 
 class Client extends React.Component{
@@ -44,6 +45,12 @@ class Client extends React.Component{
 						client={this}
 					>
 					</BezierEditor>
+				}
+				{(this.state.mode=='NeuralEditor') &&
+					<NeuralEditor
+						client={this}
+					>
+					</NeuralEditor>
 				}
 				{(this.state.mode=='MelodyEditor') &&
 					<MelodyEditor
