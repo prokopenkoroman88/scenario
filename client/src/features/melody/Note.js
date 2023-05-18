@@ -11,8 +11,10 @@ class Note extends React.Component{
 	constructor(props){
 		super(props);
 		this.state={
-			left:0,
-			top:this.toneToTop(this.props.note.tone),
+			rect:{
+				left:0,
+				top:this.toneToTop(this.props.note.tone),
+			},
 		};
 		this.drag=drag;
 	}
@@ -25,7 +27,7 @@ class Note extends React.Component{
 	topToTone(top){ return (100-top)/step; }
 
 	getStyle(){
-		return {top:this.state.top };
+		return {top:this.state.rect.top };
 	}
 
 	componentWilUnmount(){
@@ -40,10 +42,14 @@ class Note extends React.Component{
 	}
 	handleMouseUp(event){
 		this.drag.endDrag();
-		let top = Math.round(this.state.top/step)*step;
+		let top = Math.round(this.state.rect.top/step)*step;
 		let tone = this.topToTone(top);
 
-		this.setState({top:top});
+		this.setState(
+			prevState=>({
+				rect: { ...prevState.rect, top: top}
+			})
+		);
 		this.props.setTone(this.props.id,tone);
 	}
 

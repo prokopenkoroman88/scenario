@@ -1,0 +1,49 @@
+
+.container{
+	position: relative;
+
+	border: 2px inset gray;
+	margin: 5px 5px;
+	background-color: rgba(0,0,0,0.1);
+}
+
+.block{
+	position: absolute;
+	left: 0px;
+	top: 0px;
+
+	display: block;
+	border: 2px outset gray;
+	padding: 2px 2px;
+}
+
+.block .caption{
+	margin: 0px 0px;
+	padding: 2px 5px;
+	border: 1px groove gray;
+}
+
+
+/* oval */
+
+.container.oval{
+	border-radius: 20px;
+}
+
+.block.oval{
+	border-radius: 20px;
+	padding-bottom: 10px; 
+}
+
+.block.oval.empty{
+	padding-bottom: 2px; 
+}
+
+
+.block.oval .caption{
+	border-radius: 20px 20px 0px 0px;
+}
+
+.block.oval.empty .caption{
+	border-radius: 20px 20px 20px 20px;
+}
