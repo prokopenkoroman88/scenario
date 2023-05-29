@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const app = require("./core/app");
 const db = require("./core/db");//pool
+const web = require("./core/web");//routerManager
 
 process.on('uncaughtException', function (error) {
 	console.log(' --- Uncaught exception: ---');
