@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import drag from './../common/Drag.js';
+import drag from './../../common/Drag.js';
 
 
 const lineOffset=60;

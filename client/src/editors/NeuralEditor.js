@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { Neural } from './neural/Neural.js';
-import { AreaTest } from './neural/AreaTest.js';
-import NetworkTree from './neural/NetworkTree.js';
-import Screen from './canvas/Screen.js';
+import { Editor } from './Editor.js';
+import { Neural } from './../features/neural/Neural.js';
+import { AreaTest } from './../features/neural/AreaTest.js';
+import NetworkTree from './../features/neural/NetworkTree.js';
+import Screen from './../features/canvas/Screen.js';
 
 
 class NeuralEditor extends React.Component{
@@ -20,7 +21,6 @@ class NeuralEditor extends React.Component{
 			// 	obj:null,
 			// },
 		};
-		console.log('NeuralEditor.constructor');
 		this.cnv = {
 			ref:null,
 			obj:null,
@@ -66,8 +66,10 @@ class NeuralEditor extends React.Component{
 
 	render(){
 		return (
-			<div>
-				<h1>Neural Editor</h1>
+			<Editor
+				client={this.props.client}
+				caption='Neural editor'
+			>
 				<div>
 					<button
 						onClick={this.handleClickLoad.bind(this)}
@@ -88,7 +90,7 @@ class NeuralEditor extends React.Component{
 					printNetwork={this.printNetwork.bind(this)}
 				></NetworkTree>
 				}
-			</div>
+			</Editor>
 		);
 //
 	};

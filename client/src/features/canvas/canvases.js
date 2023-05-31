@@ -1,4 +1,4 @@
-import Arrow from './../common/Arrow.js'
+import Arrow from './../../common/Arrow.js'
 import PixelColor from './PixelColor.js'
 
 

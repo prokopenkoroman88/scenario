@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import ToolBar from './melody/ToolBar.js'
-import Notation from './melody/Notation.js'
-import Player from './melody/Player.js'
+import { Editor } from './Editor.js';
+import ToolBar from './../features/melody/ToolBar.js'
+import Notation from './../features/melody/Notation.js'
+import Player from './../features/melody/Player.js'
 
 class MelodyEditor extends React.Component{
 	constructor(props){
@@ -15,7 +16,6 @@ class MelodyEditor extends React.Component{
 				selected_id:-1,
 			},
 		};
-		console.log('MelodyEditor.constructor');
 		this.player= new Player();
 	}
 
@@ -88,7 +88,10 @@ class MelodyEditor extends React.Component{
 
 	render(){
 		return (
-			<div>
+			<Editor
+				client={this.props.client}
+				caption='Melody editor'
+			>
 				<ToolBar
 					editor={this}
 					notes={this.state.notes}
@@ -99,7 +102,7 @@ class MelodyEditor extends React.Component{
 					setTone={this.setTone.bind(this)}
 					selectNote={this.selectNote.bind(this)}
 				></Notation>
-			</div>
+			</Editor>
 		);
 	};
 };

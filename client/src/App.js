@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import logo from './logo.svg';
 import './App.css';
-import Client from './features/Client.js'
+import Client from './Client.js'
 
 function App() {
 	return (

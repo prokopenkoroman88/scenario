@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { Bezier } from './bezier/Bezier.js';
-import Screen from './bezier/Screen.js';
+import { Editor } from './Editor.js';
+import { Bezier } from './../features/bezier/Bezier.js';
+import Screen from './../features/canvas/Screen.js';
 
 
 class BezierEditor extends React.Component{
@@ -17,7 +18,6 @@ class BezierEditor extends React.Component{
 			// 	obj:null,
 			// },
 		};
-		console.log('BezierEditor.constructor');
 		this.cnv = {
 			ref:null,
 			obj:null,
@@ -62,8 +62,10 @@ class BezierEditor extends React.Component{
 
 	render(){
 		return (
-			<div>
-				<h1>Bezier Editor</h1>
+			<Editor
+				client={this.props.client}
+				caption='Bezier editor'
+			>
 				<div>
 					<button
 						onClick={this.handleClickPaint.bind(this)}
@@ -74,7 +76,7 @@ class BezierEditor extends React.Component{
 					getCanvas={this.handleGetCanvas.bind(this)}
 					onMouse={this.handleMouse.bind(this)}
 				></Screen>
-			</div>
+			</Editor>
 		);
 	};
 }

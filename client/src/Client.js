@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import MainBoard from './MainBoard.js'
-import ScenarioEditor from './ScenarioEditor.js'
-import BezierEditor from './BezierEditor.js'
-import NeuralEditor from './NeuralEditor.js'
-import MelodyEditor from './MelodyEditor.js'
+import ScenarioEditor from './editors/ScenarioEditor.js'
+import BezierEditor from './editors/BezierEditor.js'
+import NeuralEditor from './editors/NeuralEditor.js'
+import MelodyEditor from './editors/MelodyEditor.js'
 
 class Client extends React.Component{
 	constructor(props){
