@@ -41,10 +41,10 @@ class ResourceRouter extends Router{
 			case 'index'  : res.json(result   ); break;//result.rows
 			case 'show'   : res.json(row); break;
 			case 'create' : res.json(result); break;// return result;
-			case 'store'  : res.json(result); break;//after create row
+			case 'store'  : res.json(result.rows); break;//after create row
 			case 'edit'   : res.json(result); break;// return result;
 			case 'update' : res.json(row); break;//after edit
-			case 'destroy': res.json('Record #'+id+' was deleted from "'+this.table+'"'); break;
+			case 'destroy': res.json(result.rows); break;//'Record #'+id+' was deleted from "'+this.tableName+'"'
 			default: res.json(result); break;
 		};
 	}
