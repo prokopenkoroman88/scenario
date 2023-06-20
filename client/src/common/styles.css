@@ -1,4 +1,31 @@
 
+.panel{
+	display: flex;
+}
+
+.panel.horiz{
+	flex-direction: row;
+}
+
+.panel.vert{
+	flex-direction: column;
+}
+
+.panel.center{
+	justify-content : center;
+}
+
+
+.main-with-asides{
+	display: flex;
+	flex-direction: row;
+}
+
+.main-with-asides .panel.vert{
+	align-items: stretch;
+}
+
+
 .container{
 	position: relative;
 
