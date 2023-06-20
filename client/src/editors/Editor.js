@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 
+import { CustomEditor } from './../common/CustomEditor.js'
 
 import styles from './editor.css'
 
@@ -9,9 +10,39 @@ class Editor extends React.Component{
 		super(props);
 		//client
 		//caption
+		//css
+		//btns {top, left, right}
 		this.state={
+			//btns:props.btns,
 		};
+		this.prepareCSS();
+		this.prepareBtns();
 		//console.log(this.props.caption,'editor.constructor');
+	}
+
+	prepareCSS(){
+		this.css=this.props.css;
+		if(!this.css)
+			this.css={};
+		if(!this.css.level)
+			this.css.level=1;
+	}
+
+	addBtn(btns, caption, onClick){
+		if(Array.isArray(btns))
+			btns.push({caption,onClick,});
+		else
+			btns[caption]=onClick;
+	}
+
+	prepareBtns(){
+		this.btns=this.props.btns;
+		let topBtns=this.btns.top;
+		if(!topBtns){
+			topBtns=[];//{};
+			this.btns.top=topBtns;
+		};
+		this.addBtn(topBtns,'Exit',this.handleClickExit.bind(this));
 	}
 
 	componentDidMount(){
@@ -21,27 +52,18 @@ class Editor extends React.Component{
 		this.props.client.handleMode('MainBoard');
 	}
 
-	getClass(){
-		let className = 'editor';
-		return className;
-	}
-
 	componentWilUnmount(){
 	}
 
 	render(){
 		return (
-			<div
-				className={this.getClass()}
+			<CustomEditor
+				caption={this.props.caption}
+				css={this.css}
+				btns={this.btns}
 			>
-				<h1>{this.props.caption}</h1>
-				<nav>
-					<button
-						onClick={this.handleClickExit.bind(this)}
-					>Exit</button>
-				</nav>
 				{this.props.children}
-			</div>
+			</CustomEditor>
 		);
 	};
 };
