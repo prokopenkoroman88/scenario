@@ -75,6 +75,13 @@ class Spline extends FigureItem{
 		this.points=points;//point0,point1
 	}
 
+	get pointIds(){
+		let ids = this.points.map((point)=>{
+			return this.ownFigure.points.indexOf(point);
+		},this);
+		return ids;
+	}
+
 	get controlPoint(){
 		return [this.points[0], this.points[this.points.length-1]];
 	}
@@ -119,10 +126,17 @@ class Curve extends FigureItem{
 
 	get array(){ return 'curves'; }
 
-	constructor(ownerFigure){
+	constructor(ownerFigure, splines=[]){
 		super(ownerFigure);
-		this.splines=[];
+		this.splines=splines;
 		
+	}
+
+	get splineIds(){
+		let ids = this.splines.map((spline)=>{
+			return this.ownFigure.splines.indexOf(spline);
+		},this);
+		return ids;
 	}
 
 	isNear(x,y){
@@ -136,11 +150,50 @@ class Figure{
 	constructor(name=''){
 		this.name=name;
 		//this.rect = {x,y,w:0,h:0};
+		this.rect = {cx:0, cy:0, width:0, height:0, angle:0};
 		this.points = [];//Point
 		this.rotors = [];//Rotor
 		this.splines = [];//Spline
 		this.curves = [];//BezierCurve
 		this.figures = [];//BezierFigure (and imported)
+	}
+
+	nameIndex(attr, name){
+		let arr = attr+'s';
+		for(let i=0; i<this[arr].length; i++)
+			if(this[arr][i].name===name)
+				return i;
+		return -1;
+	}
+
+	byIndex(attr, index){
+		let arr = attr+'s';
+		return this[arr][index];
+	}
+
+	byName(attr, name){
+		let index=this.nameIndex(attr, name);
+		return this.byIndex(attr, index);
+	}
+
+	point(name){//pointByName
+		return this.byName('point', name);
+	}
+
+	rotor(name){
+		return this.byName('rotor', name);
+	}
+
+	spline(name){
+		return this.byName('spline', name);
+	}
+
+	curve(name){
+		return this.byName('curve', name);
+	}
+
+	figure(name){
+		return this.byName('figure', name);
 	}
 
 };
@@ -208,9 +261,17 @@ class Editor{
 		this.found={
 			point:-1,
 		};
+
+		this.sequence=[];
 	}
 
 	get content(){ return this.owner.content; }
+
+	newPage(){
+		this.content.layers=[];
+		this.addLayer();
+		this.addFigure();
+	}
 
 	addPoint(x,y){
 		this.curr.point = new Point(this.curr.figure, x,y);
@@ -224,7 +285,19 @@ class Editor{
 		return this.curr.rotor;
 	}
 
+	getPoint(x,y){
+		let point;
+		let found=this.findByCoords('point',x,y);
+		if(!found || found.point<0)
+			point=this.addPoint(x,y);//new
+		else
+			point=this.content.layers[found.layer].figures[found.figure].points[found.point];//find
+		return point;
+	}
+
 	preparePoints(points){
+		if(!points)
+			return points;
 		points=points.map((point)=>{
 			let res;
 			switch (typeof point) {
@@ -234,7 +307,7 @@ class Editor{
 					else {
 						let id = -1;
 						//if(this.needFind)
-							id = this.curr.figure.findPointByCoords(point.x, point.y).point;//by {x,y}
+							id = this.findByCoords('point', point.x, point.y).point;//by {x,y}
 						if(id>=0)
 							res = this.curr.figure.points[id];//find
 						else
@@ -242,7 +315,7 @@ class Editor{
 					};
 				}; break;
 				case 'number': res = this.curr.figure.points[point]; break;//by id
-				//case 'string': res = this.curr.figure.pointByName(point); break;
+				case 'string': res = this.curr.figure.point(point); break;//by name
 			};
 			return res;
 		},this);
@@ -258,8 +331,38 @@ class Editor{
 		return this.curr.spline;
 	}
 
-	addCurve(){
-		this.curr.curve = new Curve(this.curr.figure);
+	makeSpline(x,y){
+		const splineLength=4;
+		let point=this.getPoint(x,y);//find or new
+		this.sequence.push(point);
+		if(this.sequence.length==splineLength){
+			this.addSpline(this.sequence);
+			this.sequence.splice(0,splineLength-1)
+			return true;
+		}
+	}
+
+	prepareSplines(splines){
+		if(!splines)
+			return splines;
+		splines=splines.map((spline)=>{
+			let res;
+			switch (typeof spline) {
+				case 'object': {
+					if(spline.ownFigure)
+						res = spline;//by Point
+				}; break;
+				case 'number': res = this.curr.figure.splines[spline]; break;//by id
+				case 'string': res = this.curr.figure.spline(spline); break;//by name
+			};
+			return res;
+		},this);
+		return splines;
+	}
+
+	addCurve(splines){
+		splines = this.prepareSplines(splines);
+		this.curr.curve = new Curve(this.curr.figure, splines);
 		if(!this.curr.figure){
 			if(!this.curr.layer)
 				this.curr.layer = this.content.layers[0];
@@ -267,6 +370,11 @@ class Editor{
 		};
 		this.curr.figure.curves.push(this.curr.curve);
 		return this.curr.curve;
+	}
+
+	insertSplinesToCurve(splines, start=0){
+		splines = this.prepareSplines(splines);
+		this.curr.curve.splines.splice(start, 0, ...splines);
 	}
 
 	addFigure(){
@@ -301,13 +409,15 @@ class Editor{
 			layer.figures.forEach( function(figure, iFigure) {
 
 				function findBy(arrName){
-					figure[arrName].forEach( function(item, index) {
+					let arr=figure[arrName];
+					for(let index=0; index<arr.length; index++){
+						let item=arr[index];
 						isNear=item.isNear(x,y);
 						if (isNear){
 							this.found[attrName]=index;
-							return;
+							break;
 						};
-					},this);
+					};
 				};
 				findBy.bind(this)(arrName);
 				//findBy.bind(this)('points');
@@ -338,6 +448,17 @@ class Render{
 	constructor(owner, canvas=null){
 		this.owner=owner;
 		this.canvas=canvas;
+		this.rectByCanvas();
+	}
+
+	rectByCanvas(){
+		if(this.canvas)
+			this.rect={
+				top:0,
+				bottom:this.canvas.height-1,
+				left:0,
+				right:this.canvas.width-1,
+			};
 	}
 
 	get content(){ return this.owner.content; }
@@ -346,18 +467,15 @@ class Render{
 		if(canvas)
 			this.canvas=canvas;
 
-		if(!rect)
-			rect={
-				top:0,
-				bottom:this.canvas.height-1,
-				left:0,
-				right:this.canvas.width-1,
-			};
+		if(rect)
+			this.rect=rect;
+		if(!this.rect)
+			this.rectByCanvas();
 
 		this.prepare();
-		for(let y=rect.top; y<=rect.bottom; y++){
+		for(let y=this.rect.top; y<=this.rect.bottom; y++){
 			this.prepare_vert(y);
-			for(let x=rect.left; x<=rect.right; x++){
+			for(let x=this.rect.left; x<=this.rect.right; x++){
 				this.prepare_horiz(x);
 				let rgba = this.prepare_color(x,y);
 				this.canvas.setRGB(x,y,rgba);
@@ -366,21 +484,17 @@ class Render{
 		this.canvas.put();
 	}
 
-	prepare(){
+	prepareLinesByFigure(figure){
+		if(!figure)
+			return;
+
 		function dist(p1,p2){
 			return distance(p1.x,p1.y, p2.x,p2.y);
 		};
 
-		this.rows = new Array(this.canvas.height);
-		for(let i=0; i<this.rows.length; i++)
-			this.rows[i]={
-				lines:[],
-			};
-		this.currLines=[];
+
 		const line_length=10;
 
-		this.content.layers.forEach( (layer, iLayer) => {
-			layer.figures.forEach( (figure, iFigure) => {
 				figure.splines.forEach( (spline, iSpline) => {
 					let points = spline.points;
 
@@ -400,6 +514,8 @@ class Render{
 							if(delta_y>0 || (delta_y==0 && delta_x>0))
 								line={dot1:oldDot, dot2:newDot};
 							if(delta_y==0 && delta_x==0)
+								return;
+							if(!line)
 								return;
 							line.spline=spline;
 							let width=spline.controlPoint[0].width + (spline.controlPoint[1].width-spline.controlPoint[0].width)*coeff;
@@ -443,6 +559,31 @@ class Render{
 					addLine.bind(this)(1);
 
 				},this);//spline
+
+	}
+
+	prepareByFigure(figure){
+		if(!figure)
+			return;
+		this.prepareLinesByFigure(figure);
+		figure.figures.forEach( (nested_figure, iNestedFigure) => {
+			this.prepareByFigure(nested_figure);
+		}, this);
+	}
+
+	prepare(){
+
+		this.rows = new Array(this.canvas.height);
+		for(let i=0; i<this.rows.length; i++)
+			this.rows[i]={
+				lines:[],
+			};
+		this.currLines=[];
+		const line_length=10;
+
+		this.content.layers.forEach( (layer, iLayer) => {
+			layer.figures.forEach( (figure, iFigure) => {
+				this.prepareByFigure(figure);
 			},this);//figure
 		},this);//layer
 	}
@@ -557,6 +698,8 @@ class Render{
 			if(i>=0)
 				rgba=this.row_curves[i].color;
 		}
+		if(!rgba)
+			rgba=[0,0,0,155];
 		return rgba;
 	}
 
@@ -595,11 +738,17 @@ class Bezier{
 			layers : [],
 		};
 		this.editor = new Editor(this);
-		this.render = new Render(this);
+		this.render = new Render(this, this.canvas);
 	}
 
-	paint(){
-		this.render.paint(this.canvas);
+	setCanvas(canvas){
+		this.canvas=canvas;
+		this.render.canvas=this.canvas;
+		this.render.rectByCanvas();
+	}
+
+	paint(rect=null){
+		this.render.paint(this.canvas, rect);
 	}
 
 };

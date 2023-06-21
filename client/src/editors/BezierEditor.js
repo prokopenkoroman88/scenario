@@ -4,6 +4,12 @@ import { Editor } from './Editor.js';
 import { Bezier } from './../features/bezier/Bezier.js';
 import Screen from './../features/canvas/Screen.js';
 
+import drag from './../common/Drag.js'
+import Container from './../common/Container.js'
+
+import FigureEditor from './../features/bezier/FigureEditor.js';
+import { FiguresTable } from './../features/bezier/data/Figures.js';
+import { BezierTree } from './../features/bezier/BezierTree.js';
 
 class BezierEditor extends React.Component{
 	constructor(props){
@@ -13,69 +19,46 @@ class BezierEditor extends React.Component{
 				height : 600,
 				width : 1000,
 			},
-			// cnv:{
-			// 	ref:null,
-			// 	obj:null,
-			// },
 		};
-		this.cnv = {
-			ref:null,
-			obj:null,
-		};
+		this.drag=drag;
+		this.bezier = new Bezier();
 	}
 
 	componentDidMount(){
-		console.log('componentDidMount',this.state.ref,this.cnv.ref);
 	}
 
-	handleGetCanvas(ref,obj){
-		this.cnv.ref=ref;
-		this.cnv.obj=obj;
-		this.bezier = new Bezier(this.cnv.obj);
-		console.log('cnv:  ',this.cnv);
-		console.log('bezier',this.bezier);
+	getTopButtons(){
+		let btns=[
+		];
+		return btns;
 	}
 
-	handleClickPaint(){
-		this.bezier.paint();
-	}
-
-	handleMouse(event){
-		let x=event.offsetX;
-		let y=event.offsetY;
-		//event.altKey, event.ctrlKey, event.shiftKey
-		switch (event.type) {
-			case 'mousedown':
-				break;
-			case 'mousemove':
-				break;
-			case 'mouseup':
-				break;
-			default:
-				break;
-		};
+	getCSS(){
+		return {
+			//className:'',
+			//styles:{},
+			level:1,
+		}
 	}
 
 	componentWilUnmount(){
-		//delay={125*10.00020}
 	}
 
 	render(){
+		let btns={
+			top:this.getTopButtons(),
+		};
 		return (
 			<Editor
 				client={this.props.client}
 				caption='Bezier editor'
+				css={this.getCSS()}
+				btns={btns}
 			>
-				<div>
-					<button
-						onClick={this.handleClickPaint.bind(this)}
-					>paint</button>
-				</div>
-				<Screen
-					rect={this.state.rect}
-					getCanvas={this.handleGetCanvas.bind(this)}
-					onMouse={this.handleMouse.bind(this)}
-				></Screen>
+					<FigureEditor
+						rect={this.state.rect}
+						drag={this.drag}
+					></FigureEditor>
 			</Editor>
 		);
 	};

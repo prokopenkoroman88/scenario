@@ -44,7 +44,7 @@
 	padding: 2px 2px;
 }
 
-.block .caption{
+.block > .caption{
 	margin: 0px 0px;
 	padding: 2px 5px;
 	border: 1px groove gray;
@@ -67,10 +67,10 @@
 }
 
 
-.block.oval .caption{
+.block.oval > .caption{
 	border-radius: 20px 20px 0px 0px;
 }
 
-.block.oval.empty .caption{
+.block.oval.empty > .caption{
 	border-radius: 20px 20px 20px 20px;
 }
