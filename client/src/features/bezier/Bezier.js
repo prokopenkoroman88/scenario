@@ -1,3 +1,4 @@
+import Angle from './../../common/Angle.js';
 
 function distance(x0,y0,x1,y1){
 	return Math.sqrt(Math.pow(x1-x0,2) + Math.pow(y1-y0,2));
@@ -27,17 +28,46 @@ class Point extends FigureItem{
 		this.color = '#000';
 	}
 
+	get splines(){
+		//find curves of spline:
+		let point_splines=[];
+		let point=this;
+		this.ownFigure.splines.forEach( (spline)=>{
+			if(spline.points.indexOf(point)>=0)
+				point_splines.push(spline);
+		});
+		return point_splines;
+	}
+
 	shift(dx,dy){
 		this.x+=dx;
 		this.y+=dy
 	}
 
 	distance(x,y){
-		return distance(this.x, this.y, x, y);// Math.sqrt(Math.pow(x-this.x,2) + Math.pow(y-this.y,2));
+		return Angle.dist2D(this, {x,y});//return distance(this.x, this.y, x, y);// Math.sqrt(Math.pow(x-this.x,2) + Math.pow(y-this.y,2));
 	}
 
 	isNear(x,y){
 		return (this.distance(x,y)<5);
+	}
+
+	grow(center, dw, dh){
+		if(!center)
+			center=this.ownFigure.center;
+		this.x = Angle.grow(center.x, this.x, dw);
+		this.y = Angle.grow(center.y, this.y, dh);
+	}
+
+	rotate(center,angle=0){
+		if(!center)
+			center=this.ownFigure.center;
+		Angle.rotate2D(center, this,angle);
+	}
+
+	round(fractionDigits=0){
+		this.x = +(this.x).toFixed(fractionDigits);
+		this.y = +(this.y).toFixed(fractionDigits);
 	}
 
 };
@@ -73,6 +103,29 @@ class Spline extends FigureItem{
 		},this);
 
 		this.points=points;//point0,point1
+		this.prepareInterimBezierPoints();
+	}
+
+	prepareInterimBezierPoints(){
+		//масив проміжних точок для пошуку в isNear
+		let newPoint=this.points[0];
+		let c=0;
+		for(let i=1; i<this.points.length; i++)
+			c+=Angle.dist2D(this.points[i-1], this.points[i]);
+		c=c/5;//4
+		let res=[];
+		res.push({x:newPoint.x, y:newPoint.y});//first control point
+		for(let i=1; i<=c; i++){
+			newPoint = findInterimBezierPoint(this.points, i/c);
+			//newPoint.round();
+			newPoint.x = Math.round(newPoint.x);
+			newPoint.y = Math.round(newPoint.y);
+			res.push(newPoint);
+		};
+		newPoint=this.points[this.points.length-1];
+		res.push({x:newPoint.x, y:newPoint.y});//last control point
+		this.interimBezierPoints=res;
+		return res;
 	}
 
 	get pointIds(){
@@ -105,18 +158,12 @@ class Spline extends FigureItem{
 	}
 
 	isNear(x,y){
-		let oldPoint, newPoint=this.points[0];
-		let c=0;
-		for(let i=1; i<this.points.length; i++)
-			c+=this.points[i-1].distance(this.points[i].x,this.points[i].y);
-		c=c/5;//4
-		//=Math.hypot(aDot);//
-		for(let i=1; i<=c; i++){
-			if(distance(newPoint.x, newPoint.y, x, y)<5)
+		if(!this.interimBezierPoints)
+			this.prepareInterimBezierPoints();
+		let points = this.interimBezierPoints;
+		for(let i=0; i<points.length; i++)
+			if(Angle.dist2D(points[i], {x, y})<5)
 				return true;
-			oldPoint = newPoint;
-			newPoint = findInterimBezierPoint(this.points, i/c);
-		};///i++
 		return false;
 	}
 
@@ -196,6 +243,115 @@ class Figure{
 		return this.byName('figure', name);
 	}
 
+	get center(){
+		return {
+			x:this.rect.cx,
+			y:this.rect.cy,
+		}
+	}
+
+	set center(value){
+		this.rect.cx=value.x;
+		this.rect.cy=value.y;
+	}
+
+	get rectBounds(){
+		//межі фігури без урахування куту оберту
+		const c=this.center;
+		return {
+			x0:c.x-this.rect.width/2,
+			x1:c.x+this.rect.width/2,
+			y0:c.y-this.rect.height/2,
+			y1:c.y+this.rect.height/2,
+		}
+	}
+
+	get rectPoints(){
+		//кути меж фігури під кутом оберту
+		const c=this.center;
+		const b=this.rectBounds;
+		let points=[
+			{x:b.x0, y:b.y0},
+			{x:b.x1, y:b.y0},
+			{x:b.x1, y:b.y1},
+			{x:b.x0, y:b.y1},
+		];
+		points.forEach(point=>{
+			Angle.rotate2D(c,point,this.rect.angle)
+		});
+
+		return points;
+	}
+
+	isNear(x,y){
+		let c=this.center;
+		let p={x,y};//pointer
+		Angle.rotate2D(c,p,-this.rect.angle);
+		const b=this.rectBounds;
+		return (b.x0<=p.x && p.x<=b.x1) && (b.y0<=p.y && p.y<=b.y1);
+	}
+
+	changeParamsCascade(delta={dx:0, dy:0, dw:1, dh:1, dangle:0}){//px, px, 100%, 100%, rad
+		function changeParamsFor(figure){
+
+			figure.rect.cx = old_center.x + (figure.rect.cx-old_center.x)*delta.dw;
+			figure.rect.cy = old_center.y + (figure.rect.cy-old_center.y)*delta.dh;
+
+			let figure_c=figure.center;
+			Angle.rotate2D(old_center, figure_c, delta.dangle);
+			figure.center = figure_c;
+
+			figure.rect.cx+=delta.dx;
+			figure.rect.cy+=delta.dy;
+			//для перегорнутих фігур розміри мають бути також >0
+			figure.rect.width*=Math.abs(delta.dw);
+			figure.rect.height*=Math.abs(delta.dh);
+			figure.rect.angle+=delta.dangle;
+
+			figure.points.forEach(point=>{
+				point.grow(old_center,delta.dw, delta.dh);
+				point.rotate(old_center,delta.dangle);
+				point.shift(delta.dx, delta.dy);
+				point.round();
+			});
+
+			figure.splines.forEach(spline=>{
+				spline.prepareInterimBezierPoints();
+			});
+
+			figure.figures.forEach(figure=>changeParamsFor(figure));
+		};
+		let old_center=this.center;
+		changeParamsFor(this);
+	}
+
+	setParamsCascade(params={cx:0,cy:0,width:0,height:0,angle:0}){
+		//параметри лише для даної фігури, які впливають на підфігури
+		//де, яких розмірів, під яким кутом буде ця фігура
+		//params to delta
+		let delta={
+			dx : params.cx-this.rect.cx,//px
+			dy : params.cy-this.rect.cy,//px
+			dw : params.width/this.rect.width,//100%
+			dh : params.height/this.rect.height,//100%
+			dangle : params.angle-this.rect.angle,//rad
+		};
+		this.changeParamsCascade(delta);
+	}
+
+	shift(dx,dy, bCascade=true){
+		if(bCascade){
+			let delta={dx, dy, dw:1, dh:1, dangle:0,};
+			this.changeParamsCascade(delta);
+		}
+		else{
+			this.rect.cx+=dx;
+			this.rect.cy+=dy;
+			this.points.forEach(point=>point.shift(dx,dy));
+			this.splines.forEach(spline=>spline.prepareInterimBezierPoints());
+		}
+	}
+
 };
 
 class Layer{
@@ -252,10 +408,13 @@ class Editor{
 	constructor(owner){
 		this.owner=owner;
 
+		this.oldPoint={x:0,y:0};
+
 		this.curr={
 			point:null,
 			rotor:null,
 			spline:null,
+			figure:null,
 		};
 
 		this.found={
@@ -279,10 +438,20 @@ class Editor{
 		return this.curr.point;
 	}
 
+	copyPoint(point){
+		let copy = this.addPoint(point.x, point.y);
+		return copy;
+	}
+
 	addRotor(x,y){
 		this.curr.rotor = new Rotor(this.curr.figure, x,y);
 		this.curr.figure.rotors.push(this.curr.rotor);
 		return this.curr.rotor;
+	}
+
+	copyRotor(rotor){
+		let copy = this.addRotor(rotor.x, rotor.y);
+		return copy;
 	}
 
 	getPoint(x,y){
@@ -342,6 +511,11 @@ class Editor{
 		}
 	}
 
+	copySpline(spline){
+		let copy = this.addSpline(spline.pointIds);
+		return copy;
+	}
+
 	prepareSplines(splines){
 		if(!splines)
 			return splines;
@@ -372,6 +546,11 @@ class Editor{
 		return this.curr.curve;
 	}
 
+	copyCurve(curve){
+		let copy = this.addCurve(curve.splineIds);
+		return copy;
+	}
+
 	insertSplinesToCurve(splines, start=0){
 		splines = this.prepareSplines(splines);
 		this.curr.curve.splines.splice(start, 0, ...splines);
@@ -385,10 +564,53 @@ class Editor{
 		return this.curr.figure;
 	}
 
+	copyFigure(original){
+		//Додасть копію фігури original до поточної фігури або шару
+		if(!original)
+			return;
+
+		const owner = this.curr.figure;
+		const tmp_curr_figure = this.curr.figure;//!
+		const copy = new Figure();
+		this.curr.figure = copy;//! методи copy<Item> і add<Item> працюють з curr.figure
+		copy.ownFigure = owner;
+		let figures = owner?owner.figures:this.curr.layer.figures;
+		figures.push(copy);
+		copy.rect = {...original.rect};
+
+		original.points.forEach(element=>this.copyPoint(element));
+		original.rotors.forEach(element=>this.copyRotor(element));
+		original.splines.forEach(element=>this.copySpline(element));
+		original.curves.forEach(element=>this.copyCurve(element));
+		original.figures.forEach(element=>this.copyFigure(element));//recursion
+
+		this.curr.figure = tmp_curr_figure;//!
+		return copy;
+	}
+
+	integrateFigure(original, params){
+		//у поточну фігуру curr.figure додає копію фігури original із застосуванням параметрів params
+		let copy=this.copyFigure(original);
+		copy.name = params.name?params.name:original.name;
+		copy.parent = original;
+		copy.params = params;
+		copy.setParamsCascade(params);
+		return true;
+	}
+
 	addLayer(){
 		this.curr.layer = new Layer();
 		this.content.layers.push(this.curr.layer);
 		return this.curr.layer;
+	}
+
+	find(arr, x,y){
+		for(let index=0; index<arr.length; index++){
+			let item=arr[index];//item may be point, rotor, spline, figure
+			if(item.isNear(x,y))
+				return index;
+		};
+		return -1;
 	}
 
 	findByCoords(attrName,x,y){
@@ -401,44 +623,133 @@ class Editor{
 		//this.found.rotor = -1;
 		//this.found.spline = -1;
 		//this.found.curve = -1;//?
-		this.found.figure = -1;
+		this.found.figure = [];
 		this.found.layer = -1;
 
-		this.content.layers.forEach( function(layer, iLayer) {
+		let layers=this.content.layers;
+		for(let iLayer=layers.length-1; iLayer>=0; iLayer--){
+			//шукаємо деталь фігури від верхнього шару до нижнього
+			let layer=layers[iLayer];
 
-			layer.figures.forEach( function(figure, iFigure) {
+			let figure_path=[];//ids
+			layer.figures.forEach( (figure, iFigure)=>{
 
-				function findBy(arrName){
+				function findIn(figure, index){
+					figure_path.push(index);
 					let arr=figure[arrName];
-					for(let index=0; index<arr.length; index++){
-						let item=arr[index];
-						isNear=item.isNear(x,y);
-						if (isNear){
-							this.found[attrName]=index;
-							break;
-						};
+					let attrIndex=this.find(arr,x,y);
+					isNear=attrIndex>=0;
+					if(isNear){
+						this.found[attrName]=attrIndex;
+						return;
 					};
+					for(let i=0; i<figure.figures.length; i++){
+						findIn.bind(this)(figure.figures[i], i);
+						if(isNear)
+							return
+					};
+					figure_path.pop();
 				};
-				findBy.bind(this)(arrName);
-				//findBy.bind(this)('points');
-				//findBy.bind(this)('rotors');
-				//findBy.bind(this)('splines');
-				//findBy.bind(this)('curves');
+				findIn.bind(this)(figure, iFigure);
 
 				if (isNear){
-					this.found.figure=iFigure;
+					this.found.figure=figure_path;//array of ids
 					return;
 				};
-				// statements
-			},this);
+			});
 			if (isNear){
 				this.found.layer=iLayer;
-				return;
+				break;//return;
 			};
-			// statements
-		},this);
+		};
 		return this.found;
 
+	}
+
+	findFigureByCoords(x,y){
+		let isNear=false;
+		this.found.figure = [];
+		this.found.layer = -1;
+
+		//шляхи до фігур, які потраплять за координатами
+		let choiced_pathes=[];
+
+		let layers=this.content.layers;
+		for(let iLayer=layers.length-1; iLayer>=0; iLayer--){
+			//шукаємо фігуру від верхнього шару до нижнього
+			let layer=layers[iLayer];
+
+			let figure_path=[];//ids
+			layer.figures.forEach( (figure, iFigure)=>{
+
+				function findSubFigure(figure,index){
+					figure_path.push(index);
+					if(figure.isNear(x,y)){
+						let pth=figure_path.map((el)=>{return el});
+						choiced_pathes.push(pth);
+					}
+
+					figure.figures.forEach((sub_figure,index)=>{
+						findSubFigure(sub_figure,index);
+					});
+					figure_path.pop();
+				};
+
+				findSubFigure.bind(this)(figure,iFigure);
+			});
+
+			//всі фігури на шарі, які потрапили за координатами
+			if(choiced_pathes.length){
+				let iMax=-1, lenMax=0;
+				choiced_pathes.forEach((path, index)=>{
+					if(path.length>=lenMax){
+						iMax=index;
+						lenMax=path.length;
+					}
+				});
+				this.found.layer=iLayer;
+				if(iMax>=0)
+					this.found.figure=choiced_pathes[iMax];
+				return this.found;
+			};
+
+		};
+
+		return this.found;
+	}
+
+	findCurr(x,y, attrName, needClear=true){
+		//x,y -> found.index -> curr.object
+		const bFigure=attrName=='figure'
+		const arrName=attrName+'s';//'points', 'rotors', 'splines', ...
+		let found, curr;
+		if(bFigure)
+			found=this.findFigureByCoords(x,y);
+		else
+			found=this.findByCoords(attrName,x,y);
+		let attrIndex = -1;
+		if(found)
+			attrIndex = found[attrName];
+
+		const hasResult=bFigure?attrIndex.length>0:attrIndex>=0;
+		//console.log('findCurr',found,attrName,attrIndex)
+		if(hasResult){
+			curr = this.content;
+			if(found.layer>=0)
+				curr = curr.layers[found.layer];//поточний шар
+			if(found.figure.length>0){
+				found.figure.forEach((figureIndex)=>{
+					curr = curr.figures[figureIndex];//поточна фігура
+				});
+			}
+			if(!bFigure)
+				curr = curr[arrName][attrIndex];//поточна деталь фігури
+			this.curr[attrName] = curr;
+			return true;
+		}
+		else
+			if(needClear)
+				this.curr[attrName]=null;
 	}
 
 };
@@ -524,6 +835,9 @@ class Render{
 								line.width_x = width + Math.abs( line.dot2.x-line.dot1.x );
 							else
 								line.width_x = width / Math.abs( sin );
+
+							if(line.dot1.y<0 || line.dot2.y<0 || line.dot1.y>=this.rows.length || line.dot2.y>=this.rows.length)
+								return;
 
 							if(delta_y==0){
 								this.rows[Math.round(line.dot1.y)].lines.push({line:line, x:line.dot1.x, left:true});
@@ -725,6 +1039,42 @@ class Render{
 			this.paintPoint(newPoint,rgba);
 		};
 		//this.canvas.put();
+	}
+
+	//context:
+
+	stroke(color){
+		let ctx = this.canvas.ctx;
+		let strokeStyle = ctx.strokeStyle
+		ctx.strokeStyle = color;
+		ctx.stroke();
+		ctx.strokeStyle = strokeStyle;
+	}
+
+	paintFigureRect(figure, color){
+		if(!figure.rect)
+			return;
+		let points = figure.rectPoints;
+		let ctx = this.canvas.ctx;
+		ctx.beginPath();
+		ctx.moveTo(points[3].x, points[3].y);
+		points.forEach(p=>ctx.lineTo(p.x, p.y));
+		this.stroke(color);
+	}
+
+	paintEllipse(point, color, radius=1){
+		let ctx = this.canvas.ctx;
+		ctx.beginPath();
+		ctx.arc(point.x, point.y, radius, 0, Math.PI*2, true);
+		this.stroke(color);
+	}
+
+	paintLine(point1, point2, color){
+		let ctx = this.canvas.ctx;
+		ctx.beginPath();
+		ctx.moveTo(point1.x, point1.y);
+		ctx.lineTo(point2.x, point2.y);
+		this.stroke(color);
 	}
 
 };
