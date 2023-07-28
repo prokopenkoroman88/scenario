@@ -6,9 +6,12 @@ class Container extends React.Component{
 		super(props);
 		//drag
 		//rect
+		//css
 		this.state={
 			rect:props.rect,
 		};
+		this.className=this.props.css?this.props.css.className:'oval';
+		this.styles=this.props.css?this.props.css.styles:{};
 	}
 
 	handleMouseMove(event){
@@ -21,7 +24,8 @@ class Container extends React.Component{
 
 	getClass(){
 		let className='container';
-		className+=' oval';
+		if(this.className)
+			className+=' '+this.className;
 		return className;
 	}
 

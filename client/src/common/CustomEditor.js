@@ -65,18 +65,25 @@ class CustomEditor extends React.Component{
 					btns={topBtns}
 				/>
 			}
-				<div className='main-with-asides'>
+				<div className='main-with-asides'
+
+
+				>
 				{(leftBtns) &&
 					<ButtonPanel
 						btns={leftBtns}
-						className='vert'
+						className='vert left'
 					/>
 				}
-					{this.props.children}
+					<div
+						className='main'
+					>
+						{this.props.children}
+					</div>
 				{(rightBtns) &&
 					<ButtonPanel
 						btns={rightBtns}
-						className='vert'
+						className='vert right'
 					/>
 				}
 				</div>

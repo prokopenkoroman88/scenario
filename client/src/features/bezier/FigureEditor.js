@@ -357,8 +357,17 @@ class FigureEditor extends React.Component{
 			//className:'',
 			styles:{
 				margin: '0 auto',
+				'--left-panel-width':'65px',
+				'--right-panel-width':'0px',
 			},
 			level:2,
+		}
+	}
+
+	getContainerCSS(){
+		return {
+			className:'scroll',//'oval'
+			//styles:{},
 		}
 	}
 
@@ -379,6 +388,7 @@ class FigureEditor extends React.Component{
 				<Container
 					drag={this.drag}
 					rect={this.state.containerRect}
+					css={this.getContainerCSS()}
 				>
 				<Screen
 					rect={this.state.screenRect}

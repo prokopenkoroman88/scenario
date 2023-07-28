@@ -25,6 +25,18 @@
 	align-items: stretch;
 }
 
+.main-with-asides>.left{
+	width: var(--left-panel-width);
+}
+
+.main-with-asides>.right{
+	width: var(--right-panel-width);
+}
+
+.main-with-asides>.main{
+	width: calc(100% - var(--left-panel-width) - var(--right-panel-width) - 5px);
+}
+
 
 .container{
 	position: relative;
@@ -32,6 +44,10 @@
 	border: 2px inset gray;
 	margin: 5px 5px;
 	background-color: rgba(0,0,0,0.1);
+}
+
+.container.scroll{
+	overflow: scroll;
 }
 
 .block{
