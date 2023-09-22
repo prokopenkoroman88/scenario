@@ -49,6 +49,12 @@ class FigureEditor extends React.Component{
 			case 'Arrow':
 				this.bezier.editor.sequence=[];
 				break;
+			case 'Rotor':
+				this.bezier.editor.sequence=[];
+				break;
+			case 'Branch':
+				this.bezier.editor.sequence=[];
+				break;
 			case 'Spline':
 				this.bezier.editor.sequence=[];
 				break;
@@ -103,6 +109,9 @@ class FigureEditor extends React.Component{
 		let changed=false;
 		let x=event.offsetX;
 		let y=event.offsetY;
+		const editor=this.bezier.editor;
+		const old_curr={...editor.curr};
+		let sequence=editor.sequence;
 		//console.log('event', x, y, event.altKey?'Alt':'', event.ctrlKey?'Ctrl':'', event.shiftKey?'Shift':'');
 		switch (event.type) {
 			case 'mousedown':
@@ -110,6 +119,35 @@ class FigureEditor extends React.Component{
 				switch (this.state.mode) {
 					case 'Arrow':
 						changed=this.choiceBy(x,y);//curr
+						let curr=editor.curr;
+						let old_item=this.getCurrItem(old_curr);
+						let new_item=this.getCurrItem(curr);
+						//gather sequence:
+						if(new_item){
+							let old_index=sequence.indexOf(old_item);
+							let new_index=sequence.indexOf(new_item);
+							if(event.ctrlKey){
+								if(old_item && old_index<0)
+									sequence.push(old_item);
+
+								if(new_index<0)
+									sequence.push(new_item);
+								else
+									sequence.splice(new_index, 1);
+							}
+							else{
+								if(new_index<0)
+									editor.sequence=[];
+							};
+						}
+						else
+							editor.sequence=[];
+						break;
+					case 'Rotor':
+						changed=this.makeRotor(x,y);
+						break;
+					case 'Branch':
+						changed=this.makeBranch(x,y);
 						break;
 					case 'Spline':
 						changed=this.makeSpline(x,y);
@@ -123,6 +161,30 @@ class FigureEditor extends React.Component{
 			case 'mouseup':
 				switch (this.state.mode) {
 					case 'Arrow':
+						editor.findCurr(x,y, 'rotor');
+						if(editor.curr.rotor){
+
+							let old_item=this.getCurrItem(old_curr);
+							if(!sequence.length && old_item)
+								sequence.push(old_item);
+
+							this.addSequenceTo(editor.curr.rotor);//points & rotors
+							editor.sequence=[];
+							break;
+						};
+
+						editor.findCurr(x,y, 'branch');
+						if(editor.curr.branch){
+
+							let old_item=this.getCurrItem(old_curr);
+							if(!sequence.length && old_item)
+								sequence.push(old_item);
+
+							this.addSequenceTo(editor.curr.branch);//points & nodes
+							editor.sequence=[];
+							break;
+						};
+
 						changed=this.moveItem(x,y);//curr
 						break;
 					case 'Figure':
@@ -147,26 +209,56 @@ class FigureEditor extends React.Component{
 	moveItem(x,y){
 		//Переміщення елемента на canvas-і
 		let changed=false;
-		if(this.bezier.editor.curr.point){
-			this.bezier.editor.curr.point.x=x;
-			this.bezier.editor.curr.point.y=y;
+		const dx=x-this.bezier.editor.oldPoint.x;
+		const dy=y-this.bezier.editor.oldPoint.y;
+		if(!dx && !dy)
+			return changed;
+
+		const curr = this.bezier.editor.curr;
+		const sequence = this.bezier.editor.sequence;
+		if(sequence.length){
+			sequence.forEach((item)=>{
+				const bCascade=true;
+				item.shift(dx,dy, bCascade);
+			});
 			changed=true;
-			//пересування точки змінює всі проміжні точки сплайну
-			let splines = this.bezier.editor.curr.point.splines;
-			splines.forEach(spline=>spline.prepareInterimBezierPoints());
 		}
 		else
-			if(this.bezier.editor.curr.figure){
-				//Переміщення фігури
-				const bCascade=true;//разом з підфігурами
-				let figure=this.bezier.editor.curr.figure;
-				let dx=x-this.bezier.editor.oldPoint.x;
-				let dy=y-this.bezier.editor.oldPoint.y;
-				if(dx!=0 || dy!=0){
-					figure.shift(dx,dy, bCascade);
-					changed=true;
-				}
-			}
+		if(curr.point){
+			curr.point.shift(dx,dy);
+			//пересування точки змінює всі проміжні точки сплайну
+			let splines = curr.point.splines;
+			splines.forEach(spline=>spline.prepareInterimBezierPoints());
+			changed=true;
+		}
+		else
+		if(curr.rotor){
+			//переміщення ротора
+			const bCascade=true;
+			curr.rotor.shift(dx,dy, bCascade);
+			changed=true;
+		}
+		else
+		if(curr.lever){
+			//переміщення важеля ротора
+			const bCascade=true;
+			curr.lever.shift(dx,dy, bCascade);
+			changed=true;
+		}
+		else
+		if(curr.node){
+			//переміщення важеля гілки
+			const bCascade=true;
+			curr.node.shift(dx,dy, bCascade);
+			changed=true;
+		}
+		else
+		if(curr.figure){
+			//Переміщення фігури
+			const bCascade=true;//разом з підфігурами
+			curr.figure.shift(dx,dy, bCascade);
+			changed=true;
+		}
 		return changed;
 	}
 
@@ -178,6 +270,9 @@ class FigureEditor extends React.Component{
 			const old_curr={...editor.curr};
 			editor.findCurr(x,y, 'point');
 			editor.findCurr(x,y, 'rotor');
+			editor.findCurr(x,y, 'lever');
+			editor.findCurr(x,y, 'node');
+			editor.findCurr(x,y, 'branch');
 			editor.findCurr(x,y, 'spline');
 			editor.findCurr(x,y, 'figure');
 
@@ -195,13 +290,57 @@ class FigureEditor extends React.Component{
 
 	}
 
+	getCurrItem(curr=null){
+		let item=null;
+		if(!curr)
+			curr=this.bezier.editor.curr;
+		if(!item)
+			item=curr.point;
+		if(!item)
+			item=curr.node;
+		if(!item)
+			item=curr.rotor;
+		return item;
+	}
+
+	addSequenceTo(main_item){
+		let sequence=this.bezier.editor.sequence;
+		if(!sequence.length)
+			return;
+		sequence.forEach(item=>{
+			switch (item.constructor.name) {
+				case 'Point':
+					main_item.points.push(item)
+					break;
+				case 'Rotor':
+					main_item.rotors.push(item)
+					break;
+				case 'Node':
+					main_item.nodes.push(item)
+					break;
+				default:
+					break;
+			};//
+		});
+	}
+
+	makeRotor(x,y){
+		let changed=this.bezier.editor.makeRotor(x,y);
+		return changed;
+	}
+
+	makeBranch(x,y){
+		let changed=this.bezier.editor.makeBranch(x,y);
+		return changed;
+	}
+
 	makeSpline(x,y){
 		let changed=this.bezier.editor.makeSpline(x,y);
 		return changed;
 	}
 
 	integrateFigure(x,y){
-		//Інтегрування фігури в поточку фігуру curr.figure
+		//Інтегрування фігури в поточну фігуру curr.figure
 		//фігура м.б. перевернутою, коли x < oldPoint.x
 		let editor=this.bezier.editor;
 		let figureName=this.props.figure.name;
@@ -230,17 +369,87 @@ class FigureEditor extends React.Component{
 
 	optionalPaint(){//by state.show
 		const curr = this.bezier.editor.curr;
+		const sequence = this.bezier.editor.sequence;
 		const content = this.bezier.editor.content;
 		const render = this.bezier.render;
 		//
 		const colorFigureRect='#aa0000';
 		const colorCurrFigureRect='#ff0000';
 		const colorPoint='#00e0e0';
+		const colorRotor='#e00000';
+		const colorNode='#00e000';
+
+		function paintPoint(point){
+			let radius=accent=='curr'?4:2;
+			render.paintEllipse(point, colorPoint, radius);
+		}
+
+		function paintNode(node){
+			let radius=accent=='curr'?4:2;
+			render.paintEllipse(node, colorNode, radius);
+		}
+
+		function paintBranch(branch, figure){
+			let radius=accent=='curr'?4:2;
+			render.paintLine(branch.nodes[0], branch.nodes[1], colorNode);
+		}
+
+		function paintRotor(rotor){
+			let radius=accent=='curr'?4:3;
+			render.paintEllipse(rotor, colorRotor, radius);
+			let lever = rotor.leverPoint;
+			console.log('rotor', rotor);
+			console.log('lever',lever, rotor.lever);
+			render.paintEllipse(lever, colorRotor, 2);
+			render.paintLine(rotor, lever, colorRotor);
+			//
+			rotor.points.forEach(point=>render.paintLine(rotor, point, colorRotor));
+			rotor.rotors.forEach(rotor2=>render.paintLine(rotor, rotor2, colorRotor));
+		}
+
+		function paintSpline(spline){
+			let radius=3;
+			//усі проміжні точки сплайну
+			//spline.interimBezierPoints.forEach(point=>paintPoint(point));
+			//точки сплайну
+			spline.points.forEach(point=>{
+				render.paintEllipse(point, colorPoint, radius);
+			})
+			//важелі сплайну
+			for(let i=0; i<=1; i++)
+				render.paintLine(spline.controlPoint[i], spline.leverPoint[i], colorPoint);
+		}
 
 		function figureRect(figure){
 			render.paintFigureRect(figure, colorFigureRect);
 			figure.figures.forEach(figure=>figureRect(figure))
 		};
+
+		function figurePoints(figure){
+			figure.points.forEach(point=>paintPoint(point));
+			figure.figures.forEach(figure=>figurePoints(figure))
+		}
+
+		function figureSplines(figure){
+			figure.splines.forEach(spline=>{
+				spline.interimBezierPoints.forEach(point=>paintPoint(point));
+			});
+		}
+
+		function figureRotors(figure){
+			figure.rotors.forEach(rotor=>paintRotor(rotor));
+			figure.figures.forEach(figure=>figureRotors(figure))
+		}
+
+		function figureNodes(figure){
+			if(figure.nodes)
+				figure.nodes.forEach(node=>paintNode(node));
+			if(figure.branches)
+				figure.branches.forEach(branch=>paintBranch(branch, figure));
+			figure.figures.forEach(figure=>figureNodes(figure))
+		}
+
+		let accent='all';
 
 		if(this.state.show.indexOf('AllFigures')>=0){
 			//рамки фігур
@@ -249,23 +458,52 @@ class FigureEditor extends React.Component{
 			})
 		}
 
+		if(this.state.show.indexOf('AllPoints')>=0){
+			//точки та ротори
+			content.layers.forEach((layer)=>{
+				layer.figures.forEach(figure=>figurePoints(figure));
+				//layer.figures.forEach(figure=>figureSplines(figure));
+				layer.figures.forEach(figure=>figureRotors(figure));
+				layer.figures.forEach(figure=>figureNodes(figure));
+			});
+		}
+
+		accent='curr';
+
 		if(this.state.show.indexOf('Current')>=0){
 			//рамка вибраної фігури
 			if(curr.figure){
 				render.paintFigureRect(curr.figure, colorCurrFigureRect);
 			}
+			if(sequence.length){
+				sequence.forEach(item=>{
+					switch (item.constructor.name) {
+						case 'Point':
+							paintPoint(item);
+							break;
+						case 'Rotor':
+							paintRotor(item);
+							break;
+						case 'Node':
+							paintNode(item);
+							break;
+						default:
+							break;
+					};//switch
+				})
+			}
 			//вибрана точка
 			if(curr.point)
-				render.paintEllipse(curr.point, colorPoint, 4);
+				paintPoint(curr.point);
+			//вибраний ротор
+			if(curr.rotor)
+				paintRotor(curr.rotor);
+			//вибрана нода
+			if(curr.node)
+				paintNode(curr.node);
 			//точки вибраного сплайну
-			if(curr.spline){
-				curr.spline.points.forEach(point=>{
-					render.paintEllipse(point, colorPoint, 2);
-				})
-				//важелі сплайну
-				for(let i=0; i<=1; i++)
-					render.paintLine(curr.spline.controlPoint[i], curr.spline.leverPoint[i], colorPoint);
-			}
+			if(curr.spline)
+				paintSpline(curr.spline);
 		}
 		//this.bezier.canvas.put();//Після стандартних методів canvas - put не потрібен
 	}
@@ -302,6 +540,14 @@ class FigureEditor extends React.Component{
 		this.setMode('Spline');
 	}
 
+	clickRotor(){
+		this.setMode('Rotor');
+	}
+
+	clickBranch(){
+		this.setMode('Branch');
+	}
+
 	clickFigure(){
 		this.setMode('Figure');
 	}
@@ -314,12 +560,26 @@ class FigureEditor extends React.Component{
 		this.toggleShow('AllFigures');
 	}
 
+	clickAllPoints(){
+		this.toggleShow('AllPoints');
+	}
+
 	getLeftButtons(){
 		let btns=[
 			{
 				caption:'Arrow',
 				className:'toggle'+(this.state.mode=='Arrow'?' active':''),
 				onClick:this.clickArrow.bind(this),
+			},
+			{
+				caption:'Rotor',
+				className:'toggle'+(this.state.mode=='Rotor'?' active':''),
+				onClick:this.clickRotor.bind(this),
+			},
+			{
+				caption:'Branch',
+				className:'toggle'+(this.state.mode=='Branch'?' active':''),
+				onClick:this.clickBranch.bind(this),
 			},
 			{
 				caption:'Spline',
@@ -343,6 +603,11 @@ class FigureEditor extends React.Component{
 				caption:'Rects',
 				className:'toggle'+(this.state.show.indexOf('AllFigures')>=0?' active':''),
 				onClick:this.clickAllFigures.bind(this),
+			},
+			{
+				caption:'Points',
+				className:'toggle'+(this.state.show.indexOf('AllPoints')>=0?' active':''),
+				onClick:this.clickAllPoints.bind(this),
 			},
 		];
 		return btns;

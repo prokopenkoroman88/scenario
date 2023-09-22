@@ -1,5 +1,47 @@
 import Angle from './../../common/Angle.js';
 
+const CURSOR_RADIUS=5;
+const LEVER_RADIUS=40;
+
+class Rect{
+
+	constructor(){
+		this.reset();
+	}
+
+	reset(){
+		this.left=10000;
+		this.right=-10000;
+		this.top=10000;
+		this.bottom=-10000;
+	}
+
+	correct(point){
+		if(this.left>point.x)
+			this.left=point.x;
+		if(this.right<point.x)
+			this.right=point.x;
+		if(this.top>point.y)
+			this.top=point.y;
+		if(this.bottom<point.y)
+			this.bottom=point.y;
+	}
+
+	prepare(points){
+		this.reset();
+		points.forEach(point=>this.correct(point));
+		this.left-=CURSOR_RADIUS;
+		this.top-=CURSOR_RADIUS;
+		this.right+=CURSOR_RADIUS;
+		this.bottom+=CURSOR_RADIUS;
+	}
+
+	inRect(x,y){
+		return (x>=this.left && x<=this.right && y>=this.top && y<=this.bottom);
+	}
+
+};
+
 function distance(x0,y0,x1,y1){
 	return Math.sqrt(Math.pow(x1-x0,2) + Math.pow(y1-y0,2));
 }
@@ -16,27 +58,12 @@ class FigureItem{
 
 };
 
-class Point extends FigureItem{
-
-	get array(){ return 'points'; }
+class CustomPoint extends FigureItem{
 
 	constructor(ownerFigure,x,y){
 		super(ownerFigure);
 		this.x = x;
 		this.y = y;
-		this.width = 1;
-		this.color = '#000';
-	}
-
-	get splines(){
-		//find curves of spline:
-		let point_splines=[];
-		let point=this;
-		this.ownFigure.splines.forEach( (spline)=>{
-			if(spline.points.indexOf(point)>=0)
-				point_splines.push(spline);
-		});
-		return point_splines;
 	}
 
 	shift(dx,dy){
@@ -45,11 +72,11 @@ class Point extends FigureItem{
 	}
 
 	distance(x,y){
-		return Angle.dist2D(this, {x,y});//return distance(this.x, this.y, x, y);// Math.sqrt(Math.pow(x-this.x,2) + Math.pow(y-this.y,2));
+		return Angle.dist2D(this, {x,y});
 	}
 
 	isNear(x,y){
-		return (this.distance(x,y)<5);
+		return (this.distance(x,y)<CURSOR_RADIUS);
 	}
 
 	grow(center, dw, dh){
@@ -72,15 +99,287 @@ class Point extends FigureItem{
 
 };
 
-class Rotor extends Point {
+class Point extends CustomPoint{
+
+	get array(){ return 'points'; }
+
+	constructor(ownerFigure,x,y,width=1,color='#000'){
+		super(ownerFigure,x,y);
+		this.width = width;
+		this.color = color;
+	}
+
+	get splines(){
+		//find splines of point:
+		let point_splines=[];
+		let point=this;
+		this.ownFigure.splines.forEach( (spline)=>{
+			if(spline.points.indexOf(point)>=0)
+				point_splines.push(spline);
+		});
+		return point_splines;
+	}
+}
+
+class Rotor extends CustomPoint {
 
 	get array(){ return 'rotors'; }
 
 	constructor(ownerFigure,x,y,angle=0){
 		super(ownerFigure,x,y);
-		this.angle = angle;
+		this.mainAngle = 0;//кут, отриманий від конфігурації старших роторів, за ним знаходитья lever, коли angle = 0
+		this.angle = angle;//власний кут
 		this.points = [];
-		this.rotors = [];//?
+		this.nodes = [];
+		this.rotors = [];
+	}
+
+	shift(dx,dy,bCascade=true){
+		super.shift(dx,dy);
+		if(!bCascade) return;
+		this.points.forEach(point=>point.shift(dx,dy));
+		this.nodes.forEach(node=>node.shift(dx,dy));
+		this.rotors.forEach(rotor=>rotor.shift(dx,dy,bCascade));
+	}
+
+	preparePoints(rotor, dangle){
+		if(dangle==0) return;
+		//rotor == this || this.rotors[]
+		const center = this;
+		rotor.points.forEach(point=>point.rotate(center, dangle));
+		rotor.nodes.forEach(node=>node.rotate(center, dangle));
+		rotor.rotors.forEach(rotor=>rotor.rotate(center, dangle));
+		rotor.rotors.forEach(rotor=>rotor.lever.rotate(center, dangle));
+		let branches = rotor.ownFigure.branches;
+		branches.forEach(branch=>branch.prepare());
+		let splines = rotor.ownFigure.splines;
+		splines.forEach(spline=>spline.prepare());
+	}
+
+	rotateAround(rotor=null, dangle=0){
+		if(dangle==0)
+			return;
+		const center = this;
+		if(!rotor)
+			rotor=this;
+		if(rotor!=this)
+			rotor.mainAngle+=dangle;//Змінюється для підлеглих роторів
+
+		this.preparePoints(rotor, dangle);
+
+		rotor.rotors.forEach(rotor=>this.rotateAround(rotor, dangle));
+	}
+
+	get leverPoint(){
+		if(this.lever)
+			return this.lever;
+
+		for(let lever in this.ownFigure.levers)
+			if(lever.rotor==this){
+				this.lever=lever;
+				return lever;
+			};
+
+		let lever = {x:this.x, y:this.y-LEVER_RADIUS};
+		Angle.rotate2D(this, lever, this.leverAngle);
+		return lever;
+	}
+
+	get pointIds(){
+		let ids = this.points.map((point)=>{
+			return this.ownFigure.points.indexOf(point);
+		},this);
+		return ids;
+	}
+
+	get nodeIds(){
+		let ids = this.nodes.map((node)=>{
+			return this.ownFigure.nodes.indexOf(node);
+		},this);
+		return ids;
+	}
+
+	get rotorIds(){
+		let ids = this.rotors.map((rotor)=>{
+			return this.ownFigure.rotors.indexOf(rotor);
+		},this);
+		return ids;
+	}
+
+	changeAngle(dangle){
+		if(dangle==0)
+			return;
+		this.rotateAround(this, dangle);
+		this.angle+=dangle;
+		this.ownFigure.round();
+	}
+
+	setAngle(angle){
+		let dangle=Angle.diff(this.angle, angle);
+		if(dangle==0)
+			return;
+		this.changeAngle(dangle);
+	}
+
+	set leverAngle(angle){
+		this.setAngle(angle - this.mainAngle);
+	}
+
+	get leverAngle(){
+		return this.mainAngle + this.angle;
+	}
+
+};
+
+class Lever extends CustomPoint {
+
+	get array(){ return 'levers'; }
+
+	constructor(ownerFigure,x,y,rotor=null){
+		super(ownerFigure,x,y);
+		this.rotor = rotor;
+		if(this.rotor)
+			this.rotor.lever=this;
+	}
+
+	shift(dx,dy,bCascade=true){
+		super.shift(dx,dy);
+		if(!bCascade) return;
+		if(this.rotor){
+			let angle = Angle.angle(this.rotor, this);
+			this.rotor.leverAngle = angle;
+		};
+	}
+
+};
+
+class Node extends CustomPoint {
+
+	get array(){ return 'nodes'; }
+
+	constructor(ownerFigure,x,y){
+		super(ownerFigure,x,y);
+	}
+
+	get branches(){
+		//find branches of node:
+		let node_branches=[];
+		let node=this;
+		this.ownFigure.branches.forEach( (branch)=>{
+			if(branch.nodes.indexOf(node)>=0)
+				node_branches.push(branch);
+		});
+		return node_branches;
+	}
+
+	shift(dx,dy,bCascade=!true){
+		if(bCascade){
+			this.branches.forEach(branch=>branch.shift(dx,dy, this));
+			this.ownFigure.splines.forEach(spline=>spline.prepare());
+		};
+		super.shift(dx,dy);
+		this.ownFigure.branches.forEach(branch=>branch.prepare());
+	}
+
+};
+
+class Branch extends FigureItem{
+
+	get array(){ return 'branches'; }
+
+	constructor(ownerFigure, nodes, points){
+		super(ownerFigure);
+		this.nodes=nodes;//[0,1]
+		this.points=points;
+		this.prepare();
+	}
+
+	get nodeIds(){
+		let ids = this.nodes.map((node)=>{
+			return this.ownFigure.nodes.indexOf(node);
+		},this);
+		return ids;
+	}
+
+	get pointIds(){
+		let ids = this.points.map((point)=>{
+			return this.ownFigure.points.indexOf(point);
+		},this);
+		return ids;
+	}
+
+	prepareRect(){
+		this.rect.prepare(this.nodes);
+	}
+
+	prepare(){
+		if(!this.rect)
+			this.rect = new Rect();
+		this.prepareRect();
+	}
+
+	shift(dx,dy, node){
+		//Пересування node спричиняє пересування пов'язаних з цим branch точок
+		let old_node0 = this.nodes[0];
+		let old_node1 = this.nodes[1];
+
+		let old_dist = Angle.dist2D(old_node0, old_node1);
+		let old_angle = Angle.angle(old_node0, old_node1);
+
+		let iNode = this.nodes.indexOf(node);
+		if(iNode<0)
+			return;
+
+		let new_node0 = old_node0;
+		if(iNode==0)
+			new_node0 = Angle.newDot(old_node0,{dx,dy});//копія, щоби не перемістити nodes[0] завчасно
+
+		let new_node1 = old_node1;
+		if(iNode==1)
+			new_node1 = Angle.newDot(old_node1,{dx,dy});
+
+		let new_dist = Angle.dist2D(new_node0, new_node1);
+		let new_angle = Angle.angle(new_node0, new_node1);
+
+		this.points.forEach(point=>{
+			let coords=this.calcCoords(point);
+			let coordsH={
+				angle : new_angle,
+				dist : coords.height * (new_dist/old_dist),
+			};
+			let coordsW={
+				angle : new_angle+Math.PI/2,
+				dist : coords.width,
+			};
+			//переміщення points здійснюється від nodes[0]
+			let pointH=Angle.newDot(new_node0, coordsH);
+			Angle.moveRadial(pointH, point, coordsW);
+		});
+	}
+
+	calcCoords(point){
+		let radBranch = Angle.calcRadial(this.nodes[0], this.nodes[1]);
+		let radPoint = Angle.calcRadial(this.nodes[0], point);
+		let cmpAngle = Angle.diff(radBranch.angle, radPoint.angle);
+		return {
+			radBranch,//абсолютні радіальні координати branch
+			radPoint,//абсолютні радіальні координати point
+			cmpAngle,//кут point відносно branch
+			height: Math.cos(cmpAngle) * radPoint.dist,
+			width: Math.sin(cmpAngle) * radPoint.dist,
+		};
+	}
+
+	distance(x,y){
+		//відстань точки p до Branch, висота трикутника, для isNear
+		const coords = this.calcCoords({x,y});
+		return Math.abs(coords.width);
+	}
+
+	isNear(x,y){
+		if(!this.rect.inRect(x,y))
+			return false;
+		return this.distance(x,y)<CURSOR_RADIUS;
 	}
 
 };
@@ -103,6 +402,17 @@ class Spline extends FigureItem{
 		},this);
 
 		this.points=points;//point0,point1
+		this.prepare();
+	}
+
+	prepareRect(){
+		this.rect.prepare(this.points);
+	}
+
+	prepare(){
+		if(!this.rect)
+			this.rect = new Rect();
+		this.prepareRect();
 		this.prepareInterimBezierPoints();
 	}
 
@@ -158,8 +468,8 @@ class Spline extends FigureItem{
 	}
 
 	isNear(x,y){
-		if(!this.interimBezierPoints)
-			this.prepareInterimBezierPoints();
+		if(!this.rect.inRect(x,y))
+			return false;
 		let points = this.interimBezierPoints;
 		for(let i=0; i<points.length; i++)
 			if(Angle.dist2D(points[i], {x, y})<5)
@@ -194,19 +504,29 @@ class Curve extends FigureItem{
 
 class Figure{
 
+	static arrName(attr){
+		let arr = attr+'s';
+		if(attr=='branch')
+			arr = attr+'es';
+		return arr;
+	}
+
 	constructor(name=''){
 		this.name=name;
 		//this.rect = {x,y,w:0,h:0};
 		this.rect = {cx:0, cy:0, width:0, height:0, angle:0};
 		this.points = [];//Point
 		this.rotors = [];//Rotor
+		this.levers = [];//Lever
+		this.nodes = [];//Node
+		this.branches = [];//Branch
 		this.splines = [];//Spline
 		this.curves = [];//BezierCurve
 		this.figures = [];//BezierFigure (and imported)
 	}
 
 	nameIndex(attr, name){
-		let arr = attr+'s';
+		let arr = Figure.arrName(attr);
 		for(let i=0; i<this[arr].length; i++)
 			if(this[arr][i].name===name)
 				return i;
@@ -229,6 +549,18 @@ class Figure{
 
 	rotor(name){
 		return this.byName('rotor', name);
+	}
+
+	lever(name){
+		return this.byName('lever', name);
+	}
+
+	node(name){
+		return this.byName('node', name);
+	}
+
+	branch(name){
+		return this.byName('branch', name);
 	}
 
 	spline(name){
@@ -315,8 +647,33 @@ class Figure{
 				point.round();
 			});
 
+			figure.nodes.forEach(node=>{
+				node.grow(old_center,delta.dw, delta.dh);
+				node.rotate(old_center,delta.dangle);
+				node.shift(delta.dx, delta.dy);
+				node.round();
+			});
+
+			figure.rotors.forEach(rotor=>{
+				rotor.grow(old_center,delta.dw, delta.dh);
+				rotor.rotate(old_center,delta.dangle);
+				rotor.shift(delta.dx, delta.dy);
+				rotor.round();
+			});
+
+			figure.levers.forEach(lever=>{
+				lever.grow(old_center,delta.dw, delta.dh);
+				lever.rotate(old_center,delta.dangle);
+				lever.shift(delta.dx, delta.dy);
+				lever.round();
+			});
+
 			figure.splines.forEach(spline=>{
-				spline.prepareInterimBezierPoints();
+				spline.prepare();
+			});
+
+			figure.branches.forEach(branch=>{
+				branch.prepare();
 			});
 
 			figure.figures.forEach(figure=>changeParamsFor(figure));
@@ -348,8 +705,22 @@ class Figure{
 			this.rect.cx+=dx;
 			this.rect.cy+=dy;
 			this.points.forEach(point=>point.shift(dx,dy));
-			this.splines.forEach(spline=>spline.prepareInterimBezierPoints());
+			this.rotors.forEach(rotor=>rotor.shift(dx,dy));
+			this.levers.forEach(lever=>lever.shift(dx,dy));
+			this.nodes.forEach(node=>node.shift(dx,dy));
+			this.splines.forEach(spline=>spline.prepare());
+			this.branches.forEach(branch=>branch.prepare());
 		}
+	}
+
+	round(bCascade=true){
+		this.points.forEach(point=>point.round());
+		this.rotors.forEach(rotor=>rotor.round());
+		this.rotors.forEach(rotor=>rotor.angle.toFixed(3));//+
+		this.levers.forEach(lever=>lever.round());
+		this.nodes.forEach(node=>node.round());
+		if(bCascade)
+			this.figures.forEach(figure=>figure.round(bCascade));
 	}
 
 };
@@ -430,38 +801,130 @@ class Editor{
 		this.content.layers=[];
 		this.addLayer();
 		this.addFigure();
+		this.initMainFigureRect();
 	}
 
-	addPoint(x,y){
-		this.curr.point = new Point(this.curr.figure, x,y);
+	addPoint(x,y,width=1,color='#000'){
+		this.curr.point = new Point(this.curr.figure, x,y, width,color);
 		this.curr.figure.points.push(this.curr.point);
 		return this.curr.point;
 	}
 
 	copyPoint(point){
-		let copy = this.addPoint(point.x, point.y);
+		let copy = this.addPoint(point.x, point.y, point.width, point.color);
 		return copy;
 	}
 
-	addRotor(x,y){
-		this.curr.rotor = new Rotor(this.curr.figure, x,y);
+	loadPoint(x,y,width,color){
+		let point = this.addPoint(x,y,width,color);
+	}
+
+	addRotor(x,y,angle=0){
+		this.curr.rotor = new Rotor(this.curr.figure, x,y, angle);
 		this.curr.figure.rotors.push(this.curr.rotor);
 		return this.curr.rotor;
 	}
 
+	makeRotor(x,y){
+		this.addRotor(x,y,0);
+		this.addLever(x,y-20, this.curr.rotor);
+		return true;
+	}
+
 	copyRotor(rotor){
-		let copy = this.addRotor(rotor.x, rotor.y);
+		let copy = this.addRotor(rotor.x, rotor.y, rotor.angle);
+		if(rotor.lever)
+			this.addLever(rotor.lever.x, rotor.lever.y, copy);
+		copy.points = this.preparePoints(rotor.pointIds);
+		copy.nodes = this.prepareNodes(rotor.nodeIds);
+		copy.rotors = this.prepareRotors(rotor.rotorIds);
 		return copy;
+	}
+
+	loadRotor(x,y, angle, points=[], nodes=[], rotors=[]){
+		let rotor = this.addRotor(x,y,angle);
+		let leverPoint = rotor.leverPoint;//вже з урахуванням кута
+		let lever = this.addLever(leverPoint.x, leverPoint.y, rotor);
+		rotor.points = this.preparePoints(points);
+		rotor.nodes = this.prepareNodes(nodes);
+		rotor.rotors = this.prepareRotors(rotors);
+		return rotor;
+	}
+
+	addLever(x,y, rotor=null){
+		if(!rotor)
+			rotor=this.curr.rotor;
+		this.curr.lever = new Lever(this.curr.figure, x,y, rotor);
+		this.curr.figure.levers.push(this.curr.lever);
+		return this.curr.lever;
+	}
+
+	//copyLever(lever){} виконується в copyRotor
+	//loadLever(x,y, rotor){} виконується в loadRotor
+
+	addNode(x,y){
+		this.curr.node = new Node(this.curr.figure, x,y);
+		this.curr.figure.nodes.push(this.curr.node);
+		return this.curr.node;
+	}
+
+	copyNode(node){
+		let copy = this.addNode(node.x, node.y);
+		return copy;
+	}
+
+	loadNode(x,y){
+		let node = this.addNode(x,y);
+		return node;
+	}
+
+	addBranch(nodes=[],points=[]){
+		if(nodes.length)
+			nodes = this.prepareNodes(nodes);
+		if(points.length)
+			points = this.preparePoints(points);
+		this.curr.branch = new Branch(this.curr.figure, nodes, points);
+		this.curr.figure.branches.push(this.curr.branch);
+		return this.curr.branch;
+	}
+
+	makeBranch(x,y){
+		const branchLength=2;
+		let node=this.getNode(x,y);//find or new
+		this.sequence.push(node);
+		if(this.sequence.length==branchLength){
+			this.addBranch(this.sequence);
+			this.sequence.splice(0,branchLength-1)
+			return true;
+		}
+	}
+
+	copyBranch(branch){
+		let copy = this.addBranch(branch.nodeIds, branch.pointIds);
+		return copy;
+	}
+
+	loadBranch(nodes=[],points=[]){
+		let branch = this.addBranch(nodes, points);
+		return branch;
 	}
 
 	getPoint(x,y){
 		let point;
-		let found=this.findByCoords('point',x,y);
-		if(!found || found.point<0)
+		if(!this.findCurr(x,y, 'point'))//changes curr!
 			point=this.addPoint(x,y);//new
 		else
-			point=this.content.layers[found.layer].figures[found.figure].points[found.point];//find
+			point=this.curr.point;//find
 		return point;
+	}
+
+	getNode(x,y){
+		let node;
+		if(!this.findCurr(x,y, 'node'))//changes curr!
+			node=this.addNode(x,y);//new
+		else
+			node=this.curr.node;//find
+		return node;
 	}
 
 	preparePoints(points){
@@ -491,6 +954,60 @@ class Editor{
 		return points;
 	}
 
+	prepareRotors(rotors){
+		if(!rotors)
+			return rotors;
+		rotors=rotors.map((rotor)=>{
+			let res;
+			switch (typeof rotor) {
+				case 'object': {
+					if(rotor.ownFigure)
+						res = rotor;//by Point
+					else {
+						let id = -1;
+						//if(this.needFind)
+							id = this.findByCoords('rotor', rotor.x, rotor.y).rotor;//by {x,y}
+						if(id>=0)
+							res = this.curr.figure.rotors[id];//find
+						else
+							res = this.addRotor(rotor.x, rotor.y);//new
+					};
+				}; break;
+				case 'number': res = this.curr.figure.rotors[rotor]; break;//by id
+				case 'string': res = this.curr.figure.rotor(rotor); break;//by name
+			};
+			return res;
+		},this);
+		return rotors;
+	}
+
+	prepareNodes(nodes){
+		if(!nodes)
+			return nodes;
+		nodes=nodes.map((node)=>{
+			let res;
+			switch (typeof node) {
+				case 'object': {
+					if(node.ownFigure)
+						res = node;//by node
+					else {
+						let id = -1;
+						//if(this.needFind)
+							id = this.findByCoords('node', node.x, node.y).node;//by {x,y}
+						if(id>=0)
+							res = this.curr.figure.nodes[id];//find
+						else
+							res = this.addNode(node.x, node.y);//new
+					};
+				}; break;
+				case 'number': res = this.curr.figure.nodes[node]; break;//by id
+				case 'string': res = this.curr.figure.node(node); break;//by name
+			};
+			return res;
+		},this);
+		return nodes;
+	}
+
 	addSpline(points){//objs or ids or {x,y}
 		points = this.preparePoints(points);
 		this.curr.spline = new Spline(this.curr.figure, points);//newPoint==this.currPoint
@@ -514,6 +1031,11 @@ class Editor{
 	copySpline(spline){
 		let copy = this.addSpline(spline.pointIds);
 		return copy;
+	}
+
+	loadSpline(points){
+		let spline = this.addSpline(points);
+		return spline;
 	}
 
 	prepareSplines(splines){
@@ -548,7 +1070,14 @@ class Editor{
 
 	copyCurve(curve){
 		let copy = this.addCurve(curve.splineIds);
+		copy.color=curve.color;
 		return copy;
+	}
+
+	loadCurve(splines, color){
+		let curve = this.addCurve(splines);
+		curve.color = color;
+		return curve;
 	}
 
 	insertSplinesToCurve(splines, start=0){
@@ -580,6 +1109,8 @@ class Editor{
 
 		original.points.forEach(element=>this.copyPoint(element));
 		original.rotors.forEach(element=>this.copyRotor(element));
+		original.nodes.forEach(element=>this.copyNode(element));
+		original.branches.forEach(element=>this.copyBranch(element));
 		original.splines.forEach(element=>this.copySpline(element));
 		original.curves.forEach(element=>this.copyCurve(element));
 		original.figures.forEach(element=>this.copyFigure(element));//recursion
@@ -596,6 +1127,16 @@ class Editor{
 		copy.params = params;
 		copy.setParamsCascade(params);
 		return true;
+	}
+
+	initMainFigureRect(){
+		let width=this.owner.canvas.width;
+		let height=this.owner.canvas.height;
+		let margin=100;
+		this.curr.figure.rect.cx=Math.round(width/2);
+		this.curr.figure.rect.cy=Math.round(height/2);
+		this.curr.figure.rect.width=width-margin;
+		this.curr.figure.rect.height=height-margin;
 	}
 
 	addLayer(){
@@ -616,7 +1157,7 @@ class Editor{
 	findByCoords(attrName,x,y){
 		//attrName in ['point', 'rotor', 'spline']
 
-		let arrName=attrName+'s';
+		let arrName=Figure.arrName(attrName);
 		let isNear=false;
 		this.found[attrName] = -1;
 		//this.found.point = -1;
@@ -721,7 +1262,7 @@ class Editor{
 	findCurr(x,y, attrName, needClear=true){
 		//x,y -> found.index -> curr.object
 		const bFigure=attrName=='figure'
-		const arrName=attrName+'s';//'points', 'rotors', 'splines', ...
+		const arrName=Figure.arrName(attrName);//'points', 'rotors', 'splines', ...
 		let found, curr;
 		if(bFigure)
 			found=this.findFigureByCoords(x,y);

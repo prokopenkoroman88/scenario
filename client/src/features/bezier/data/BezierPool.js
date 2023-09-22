@@ -43,13 +43,32 @@ class BezierPool{
 		let s=`\n//${figure.name}`;
 
 		figure.points.forEach((point)=>{
-			s+=`\n\t\t\teditor.addPoint(${point.x},${point.y});`;
+			s+=`\n\t\t\teditor.loadPoint(${point.x},${point.y}, ${point.width}, '${point.color}');`;
+		});
+
+		s+='\n';
+		figure.nodes.forEach((node)=>{
+			s+=`\n\t\t\teditor.loadNode(${node.x},${node.y});`;
+		});//nodes must be before rotors
+
+		s+='\n';
+		figure.rotors.forEach((rotor)=>{
+			s+=`\n\t\t\teditor.loadRotor(${rotor.x},${rotor.y}, ${rotor.angle}, [${rotor.pointIds}], [${rotor.nodeIds}], [${rotor.rotorIds}]);`;
+		});
+
+		s+='\n';
+		figure.branches.forEach((branch)=>{
+			s+=`\n\t\t\teditor.loadBranch([${branch.nodeIds}], [${branch.pointIds}]);`;
 		});
 
 		s+='\n';
 		figure.splines.forEach((spline)=>{
-			let ids = spline.points.map((point)=>point.index);
-			s+=`\n\t\t\teditor.addSpline([${ids[0]},${ids[1]},${ids[2]},${ids[3]}]);`;
+			s+=`\n\t\t\teditor.loadSpline([${spline.pointIds}]);`;
+		});
+
+		s+='\n';
+		figure.curves.forEach((curve)=>{
+			s+=`\n\t\t\teditor.loadCurve([${curve.splineIds}], '${curve.color}');`;
 		});
 
 		console.log(s);
