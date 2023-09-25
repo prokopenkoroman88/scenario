@@ -11,10 +11,7 @@ export default class Curve extends FigureItem{
 	}
 
 	get splineIds(){
-		let ids = this.splines.map((spline)=>{
-			return this.ownFigure.splines.indexOf(spline);
-		},this);
-		return ids;
+		return this.getIds('splines');
 	}
 
 	isNear(x,y){

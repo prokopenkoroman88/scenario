@@ -10,13 +10,7 @@ export default class Node extends CustomPoint {
 
 	get branches(){
 		//find branches of node:
-		let node_branches=[];
-		let node=this;
-		this.ownFigure.branches.forEach( (branch)=>{
-			if(branch.nodes.indexOf(node)>=0)
-				node_branches.push(branch);
-		});
-		return node_branches;
+		return this.getOwners('branches');
 	}
 
 	shift(dx,dy,bCascade=!true){

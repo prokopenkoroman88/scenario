@@ -12,12 +12,6 @@ export default class Point extends CustomPoint{
 
 	get splines(){
 		//find splines of point:
-		let point_splines=[];
-		let point=this;
-		this.ownFigure.splines.forEach( (spline)=>{
-			if(spline.points.indexOf(point)>=0)
-				point_splines.push(spline);
-		});
-		return point_splines;
+		return this.getOwners('splines');
 	}
 };

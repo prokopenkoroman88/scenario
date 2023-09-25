@@ -32,7 +32,7 @@ export default class Figure{
 	}
 
 	byIndex(attr, index){
-		let arr = attr+'s';
+		let arr = Figure.arrName(attr);
 		return this[arr][index];
 	}
 

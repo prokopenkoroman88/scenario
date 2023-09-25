@@ -14,7 +14,7 @@ export default class Spline extends FigureItem{
 			switch (typeof point) {
 				case 'object': res = point; break;
 				case 'number': res = ownerFigure.points[point]; break;
-				//case 'string': res = this.dotByName(dot); break;
+				case 'string': res = ownerFigure.point(point); break;
 			};
 			return res;
 		},this);
@@ -97,10 +97,7 @@ export default class Spline extends FigureItem{
 	}
 
 	get pointIds(){
-		let ids = this.points.map((point)=>{
-			return this.ownFigure.points.indexOf(point);
-		},this);
-		return ids;
+		return this.getIds('points');
 	}
 
 	get controlPoint(){
@@ -116,13 +113,7 @@ export default class Spline extends FigureItem{
 
 	get curves(){
 		//find curves of spline:
-		let spline_curves=[];
-		let spline=this;
-		this.ownFigure.curves.forEach( (curve)=>{
-			if(curve.splines.indexOf(spline)>=0)
-				spline_curves.push(curve);
-		});
-		return spline_curves;
+		return this.getOwners('curves');
 	}
 
 	isNear(x,y){

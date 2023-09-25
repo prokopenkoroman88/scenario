@@ -14,17 +14,11 @@ export default class Branch extends FigureItem{
 	}
 
 	get nodeIds(){
-		let ids = this.nodes.map((node)=>{
-			return this.ownFigure.nodes.indexOf(node);
-		},this);
-		return ids;
+		return this.getIds('nodes');
 	}
 
 	get pointIds(){
-		let ids = this.points.map((point)=>{
-			return this.ownFigure.points.indexOf(point);
-		},this);
-		return ids;
+		return this.getIds('points');
 	}
 
 	prepareRect(){

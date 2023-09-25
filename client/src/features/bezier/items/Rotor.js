@@ -68,24 +68,15 @@ export default class Rotor extends CustomPoint {
 	}
 
 	get pointIds(){
-		let ids = this.points.map((point)=>{
-			return this.ownFigure.points.indexOf(point);
-		},this);
-		return ids;
+		return this.getIds('points');
 	}
 
 	get nodeIds(){
-		let ids = this.nodes.map((node)=>{
-			return this.ownFigure.nodes.indexOf(node);
-		},this);
-		return ids;
+		return this.getIds('nodes');
 	}
 
 	get rotorIds(){
-		let ids = this.rotors.map((rotor)=>{
-			return this.ownFigure.rotors.indexOf(rotor);
-		},this);
-		return ids;
+		return this.getIds('rotors');
 	}
 
 	changeAngle(dangle){
