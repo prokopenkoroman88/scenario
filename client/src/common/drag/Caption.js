@@ -41,7 +41,7 @@ class Caption extends React.Component{
 			case 4: return (
 				<h4
 					className={this.getClass()}
-					onMouseDown={this.handleMousedown.bind(this)}
+					onMouseDown={this.handleMouseDown.bind(this)}
 				>{this.props.children}</h4>);
 			case 5: return (
 				<h5
