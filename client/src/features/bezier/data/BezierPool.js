@@ -71,6 +71,17 @@ class BezierPool{
 			s+=`\n\t\t\teditor.loadCurve([${curve.splineIds}], '${curve.color}');`;
 		});
 
+		s+='\n';
+		figure.figures.forEach((figure)=>{
+			let params = figure.params;
+			if(!params){
+				params = figure.rect;
+				params.name = figure.name;
+			};
+			let sParams = JSON.stringify(params);
+			s+=`\n\t\t\teditor.integrateFigure( this.figure('${figure.parent.name}'), ${sParams});`;
+		});
+
 		console.log(s);
 	}
 

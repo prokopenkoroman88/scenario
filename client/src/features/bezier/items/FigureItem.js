@@ -1,6 +1,8 @@
 
 export default class FigureItem{
 
+	get kind(){ return this.constructor.name.toLowerCase(); }//==attrName
+
 	get array(){ return ''; }
 
 	get index(){ return this.ownFigure[this.array].indexOf(this); }

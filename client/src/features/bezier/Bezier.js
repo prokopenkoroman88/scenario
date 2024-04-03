@@ -10,8 +10,10 @@ import Node from './items/Node.js';
 import Branch from './items/Branch.js';
 import Spline from './items/Spline.js';
 import Curve from './items/Curve.js';
+//import FigureContainer from './items/FigureContainer.js';
 import Figure from './items/Figure.js';
 import Layer from './items/Layer.js';
+import Content from './items/Content.js';
 
 function distance(x0,y0,x1,y1){
 	return Math.sqrt(Math.pow(x1-x0,2) + Math.pow(y1-y0,2));
@@ -44,7 +46,7 @@ class Editor{
 	get content(){ return this.owner.content; }
 
 	newPage(){
-		this.content.layers=[];
+		this.newContent();
 		this.addLayer();
 		this.addFigure();
 		this.initMainFigureRect();
@@ -331,11 +333,19 @@ class Editor{
 		this.curr.curve.splines.splice(start, 0, ...splines);
 	}
 
-	addFigure(){
-		this.curr.figure = new Figure();
-		if(!this.curr.layer)
-			this.curr.layer = this.content.layers[0];
-		this.curr.layer.figures.push(this.curr.figure);
+	addFigure(subFigure=false){
+		let figure = new Figure();
+
+		if(subFigure && this.curr.figure){
+			this.curr.figure.figures.push(figure);
+		}
+		else{
+			if(!this.curr.layer)
+				this.curr.layer = this.content.layers[0];
+			this.curr.layer.figures.push(figure);
+		}
+
+		this.curr.figure = figure;
 		return this.curr.figure;
 	}
 
@@ -347,6 +357,8 @@ class Editor{
 		const owner = this.curr.figure;
 		const tmp_curr_figure = this.curr.figure;//!
 		const copy = new Figure();
+		copy.name = original.name;//for details copied from original
+		copy.parent = original;
 		this.curr.figure = copy;//! методи copy<Item> і add<Item> працюють з curr.figure
 		copy.ownFigure = owner;
 		let figures = owner?owner.figures:this.curr.layer.figures;
@@ -391,6 +403,11 @@ class Editor{
 		return this.curr.layer;
 	}
 
+	newContent(){
+		this.owner.content = new Content();
+		return this.content;
+	}
+
 	find(arr, x,y){
 		for(let index=0; index<arr.length; index++){
 			let item=arr[index];//item may be point, rotor, spline, figure
@@ -422,6 +439,8 @@ class Editor{
 			layer.figures.forEach( (figure, iFigure)=>{
 
 				function findIn(figure, index){
+					if(!figure)
+						return;
 					figure_path.push(index);
 					let arr=figure[arrName];
 					let attrIndex=this.find(arr,x,y);
@@ -537,6 +556,19 @@ class Editor{
 		else
 			if(needClear)
 				this.curr[attrName]=null;
+	}
+
+	findByPath(path){
+		let found = this.content.indicesByPath(path);
+		return this.content.itemByIndices(found);
+	}
+
+	isOwnerCurr(item, attrName){
+		//Чи вибраний елемент класу attrName, якому належить елемент item
+		const arrName = Figure.arrName(attrName);
+		let currOwner = this.curr[attrName];
+		let res = (item.getOwners(arrName).indexOf(currOwner)>=0);
+		return res;
 	}
 
 };
@@ -839,7 +871,7 @@ class Render{
 	}
 
 	paintFigureRect(figure, color){
-		if(!figure.rect)
+		if(!figure || !figure.rect)
 			return;
 		let points = figure.rectPoints;
 		let ctx = this.canvas.ctx;

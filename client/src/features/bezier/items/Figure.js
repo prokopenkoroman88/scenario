@@ -1,17 +1,10 @@
 import Angle from './../../../common/Angle.js';
+import FigureContainer from './FigureContainer.js';
 
-export default class Figure{
-
-	static arrName(attr){
-		let arr = attr+'s';
-		if(attr=='branch')
-			arr = attr+'es';
-		return arr;
-	}
+export default class Figure extends FigureContainer{
 
 	constructor(name=''){
-		this.name=name;
-		//this.rect = {x,y,w:0,h:0};
+		super(name);
 		this.rect = {cx:0, cy:0, width:0, height:0, angle:0};
 		this.points = [];//Point
 		this.rotors = [];//Rotor
@@ -21,24 +14,6 @@ export default class Figure{
 		this.splines = [];//Spline
 		this.curves = [];//BezierCurve
 		this.figures = [];//BezierFigure (and imported)
-	}
-
-	nameIndex(attr, name){
-		let arr = Figure.arrName(attr);
-		for(let i=0; i<this[arr].length; i++)
-			if(this[arr][i].name===name)
-				return i;
-		return -1;
-	}
-
-	byIndex(attr, index){
-		let arr = Figure.arrName(attr);
-		return this[arr][index];
-	}
-
-	byName(attr, name){
-		let index=this.nameIndex(attr, name);
-		return this.byIndex(attr, index);
 	}
 
 	point(name){//pointByName
@@ -71,6 +46,21 @@ export default class Figure{
 
 	figure(name){
 		return this.byName('figure', name);
+	}
+
+	figureEx(names=[]){
+		return this.byNames('figure', names);
+	}
+
+	indexByName(name, attrNames='point rotor lever node branch spline curve'){
+		const attrs=attrNames.split(' ');
+		let res={};
+		attrs.forEach(attr=>{
+			let index = this.byName(attr, name);
+			if(index>=0)
+				res[attr] = index;
+		});
+		return res;//{point:1}
 	}
 
 	get center(){
@@ -209,6 +199,8 @@ export default class Figure{
 			this.splines.forEach(spline=>spline.prepare());
 			this.branches.forEach(branch=>branch.prepare());
 		}
+		this.params.cx+=dx;
+		this.params.cy+=dy;
 	}
 
 	round(bCascade=true){
