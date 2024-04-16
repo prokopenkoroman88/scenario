@@ -174,6 +174,10 @@ export default class Figure extends FigureContainer{
 		//параметри лише для даної фігури, які впливають на підфігури
 		//де, яких розмірів, під яким кутом буде ця фігура
 		//params to delta
+		if(!this.rect.width)
+			this.rect.width=1;
+		if(!this.rect.height)
+			this.rect.height=1;
 		let delta={
 			dx : params.cx-this.rect.cx,//px
 			dy : params.cy-this.rect.cy,//px
@@ -199,8 +203,11 @@ export default class Figure extends FigureContainer{
 			this.splines.forEach(spline=>spline.prepare());
 			this.branches.forEach(branch=>branch.prepare());
 		}
-		this.params.cx+=dx;
-		this.params.cy+=dy;
+		if(this.params){
+			//if the figure is integrated
+			this.params.cx+=dx;
+			this.params.cy+=dy;
+		}
 	}
 
 	round(bCascade=true){

@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { CustomEditor } from './../../common/CustomEditor.js';
+import { CustomEditor } from './../../common/editor/CustomEditor.js';
 import { Bezier } from './Bezier.js';
 import Screen from './../canvas/Screen.js';
 
-import drag from './../../common/Drag.js'
-import Container from './../../common/Container.js'
+import Drag from './../../common/drag/Drag.js'
+import Container from './../../common/drag/Container.js'
 
 import { FiguresTable } from './data/Figures.js';
 import { BezierTree } from './BezierTree.js';
@@ -28,12 +28,13 @@ class FigureEditor extends React.Component{
 			mode:'Arrow',
 			show:['Current'],
 			curr:{},
+			mainFigure:null,
 			canvas:{
 				ref:null,
 				obj:null,
 			},
 		};
-		this.drag=drag;
+		this.drag=new Drag();
 		if(this.props.bezier)
 			this.bezier = this.props.bezier;
 		else
@@ -60,6 +61,14 @@ class FigureEditor extends React.Component{
 				break;
 			case 'Figure':
 				this.bezier.editor.sequence=[];
+				break;
+			case 'Integrate':
+				this.bezier.editor.sequence=[];
+				this.props.figure.open();
+				this.props.figure.link({
+					onOK:null,
+					onCancel:(()=>{this.clickArrow()}).bind(this),
+				});
 				break;
 			default:
 				break;
@@ -115,6 +124,7 @@ class FigureEditor extends React.Component{
 		//console.log('event', x, y, event.altKey?'Alt':'', event.ctrlKey?'Ctrl':'', event.shiftKey?'Shift':'');
 		switch (event.type) {
 			case 'mousedown':
+				this.props.figure.close();
 				this.bezier.editor.oldPoint={x,y};
 				switch (this.state.mode) {
 					case 'Arrow':
@@ -157,6 +167,15 @@ class FigureEditor extends React.Component{
 				};
 				break;
 			case 'mousemove':
+				switch (this.state.mode) {
+					case 'Arrow':
+						changed=this.choiceBy(x,y);//curr
+						editor.curr=old_curr;
+						break;
+					default:
+						changed=true;
+						break;
+				};
 				break;
 			case 'mouseup':
 				switch (this.state.mode) {
@@ -188,6 +207,9 @@ class FigureEditor extends React.Component{
 						changed=this.moveItem(x,y);//curr
 						break;
 					case 'Figure':
+						changed=this.addFigure(x,y);
+						break;
+					case 'Integrate':
 						changed=this.integrateFigure(x,y);
 						this.setMode();
 						break;
@@ -339,6 +361,44 @@ class FigureEditor extends React.Component{
 		return changed;
 	}
 
+	addFigure(x,y){
+		let editor=this.bezier.editor;
+		let figure = editor.addFigure(true);
+		let changed = !!figure;
+		let params={
+			cx:(editor.oldPoint.x+x)/2,
+			cy:(editor.oldPoint.y+y)/2,
+			width:x-editor.oldPoint.x,
+			height:y-editor.oldPoint.y,
+			angle:0,
+		}
+		figure.rect.cx=params.cx;
+		figure.rect.cy=params.cy;
+		figure.rect.width=params.width;
+		figure.rect.height=params.height;
+		return changed;
+	}
+
+	openFigure(){
+		let editor=this.bezier.editor;
+		let figureName=this.props.figure.name;
+		let original=this.pool.figure(figureName);
+		let params={
+			cx:original.rect.cx,
+			cy:original.rect.cy,
+			width:original.rect.width,
+			height:original.rect.height,
+			angle:0,
+		}
+		editor.newContent();//clear();
+		editor.addLayer();
+		editor.curr.figure=original;
+		editor.curr.layer.figures.push(editor.curr.figure);
+		this.setState({mainFigure:original});
+		let changed=true;
+		return changed;
+	}
+
 	integrateFigure(x,y){
 		//Інтегрування фігури в поточну фігуру curr.figure
 		//фігура м.б. перевернутою, коли x < oldPoint.x
@@ -359,6 +419,7 @@ class FigureEditor extends React.Component{
 //=============== top panel =================
 
 	clickNewPage(){
+		this.setState({mainFigure:null});
 		this.bezier.editor.newPage();
 	}
 
@@ -421,6 +482,8 @@ class FigureEditor extends React.Component{
 		}
 
 		function figureRect(figure){
+			if(!figure)
+				return;
 			render.paintFigureRect(figure, colorFigureRect);
 			figure.figures.forEach(figure=>figureRect(figure))
 		};
@@ -509,15 +572,22 @@ class FigureEditor extends React.Component{
 	}
 
 	clickOpenFigure(){
-		let figureName=this.props.figure.name;
-		this.pool.openFigure(this.bezier.editor, figureName);
-		this.clickPaint();
-		console.log('bezier', this.bezier);
+		this.props.figure.open();
+		this.props.figure.link({
+			onOK:this.openFigure.bind(this),
+			onCancel:null,
+		});
 	}
 
 	clickSaveJS(){
-		let figure = this.bezier.content.layers[0].figures[0];
-		this.pool.saveFigureToCode(figure);
+		let s = '';
+		if(this.state.mainFigure){
+			s = this.pool.saveMainFigureToCode(this.bezier.content);
+		}
+		else{
+			s = this.pool.saveContentToCode(this.bezier.content);
+		};
+		console.log(s);
 	}
 
 	getTopButtons(){
@@ -550,6 +620,10 @@ class FigureEditor extends React.Component{
 
 	clickFigure(){
 		this.setMode('Figure');
+	}
+
+	clickIntegrate(){
+		this.setMode('Integrate');
 	}
 
 	clickCurrent(){
@@ -590,6 +664,11 @@ class FigureEditor extends React.Component{
 				caption:'Figure',
 				className:'toggle'+(this.state.mode=='Figure'?' active':''),
 				onClick:this.clickFigure.bind(this),
+			},
+			{
+				caption:'Integrate',
+				className:'toggle'+(this.state.mode=='Integrate'?' active':''),
+				onClick:this.clickIntegrate.bind(this),
 			},
 			{
 				className:'separator',

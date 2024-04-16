@@ -1,3 +1,4 @@
+import FigurePath from './FigurePath.js';
 
 export default class FigureContainer{
 
@@ -30,6 +31,19 @@ export default class FigureContainer{
 	byName(attr, name){
 		let index=this.nameIndex(attr, name);
 		return this.byIndex(attr, index);
+	}
+
+	pathIndices(path){
+		let figurePath = new FigurePath(path);
+		figurePath.findItemIn(this);
+		return figurePath.links;
+	}
+
+	byPath(path){
+		let figurePath = new FigurePath(path);
+		let item = figurePath.findItemIn(this);
+		console.log('byPath', path, figurePath, item);
+		return figurePath.findItemIn(this);
 	}
 
 	namesIndices(attr, names){

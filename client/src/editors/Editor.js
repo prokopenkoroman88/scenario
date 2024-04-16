@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 
-import { CustomEditor } from './../common/CustomEditor.js'
+import { CustomEditor } from './../common/editor/CustomEditor.js'
 
 import styles from './editor.css'
 
@@ -37,6 +37,8 @@ class Editor extends React.Component{
 
 	prepareBtns(){
 		this.btns=this.props.btns;
+		if(!this.btns)
+			this.btns={};
 		let topBtns=this.btns.top;
 		if(!topBtns){
 			topBtns=[];//{};
@@ -56,6 +58,7 @@ class Editor extends React.Component{
 	}
 
 	render(){
+		this.prepareBtns();
 		return (
 			<CustomEditor
 				caption={this.props.caption}

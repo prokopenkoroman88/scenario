@@ -24,6 +24,7 @@ class Editor{
 		this.owner=owner;
 
 		this.settings={
+			MAIN_INDENT:100,
 			CURSOR_RADIUS:5,
 		};
 
@@ -377,6 +378,15 @@ class Editor{
 		return copy;
 	}
 
+	loadFigure(params, func){
+		const tmp_curr_figure = this.curr.figure;//!
+		let figure = this.addFigure(true);
+		figure.setParamsCascade(params);
+		if(func)
+			func(this);
+		this.curr.figure = tmp_curr_figure;//!
+	}
+
 	integrateFigure(original, params){
 		//у поточну фігуру curr.figure додає копію фігури original із застосуванням параметрів params
 		let copy=this.copyFigure(original);
@@ -390,7 +400,7 @@ class Editor{
 	initMainFigureRect(){
 		let width=this.owner.canvas.width;
 		let height=this.owner.canvas.height;
-		let margin=100;
+		let margin=this.settings.MAIN_INDENT;
 		this.curr.figure.rect.cx=Math.round(width/2);
 		this.curr.figure.rect.cy=Math.round(height/2);
 		this.curr.figure.rect.width=width-margin;
@@ -401,6 +411,11 @@ class Editor{
 		this.curr.layer = new Layer();
 		this.content.layers.push(this.curr.layer);
 		return this.curr.layer;
+	}
+
+	loadLayer(name){
+		this.addLayer();
+		this.curr.layer.name=name;
 	}
 
 	newContent(){
@@ -559,8 +574,7 @@ class Editor{
 	}
 
 	findByPath(path){
-		let found = this.content.indicesByPath(path);
-		return this.content.itemByIndices(found);
+		return this.content.byPath(path);
 	}
 
 	isOwnerCurr(item, attrName){

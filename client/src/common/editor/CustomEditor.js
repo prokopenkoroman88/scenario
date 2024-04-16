@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 
-import Caption from './Caption.js'
+import Caption from './../drag/Caption.js'
 import ButtonPanel from './ButtonPanel.js'
 
 import styles from './styles.css'
