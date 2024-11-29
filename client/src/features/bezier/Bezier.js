@@ -150,6 +150,8 @@ class Editor{
 
 	copyBranch(branch){
 		let copy = this.addBranch(branch.nodeIds, branch.pointIds);
+		copy.parent = branch;
+		copy.name = branch.name;
 		return copy;
 	}
 

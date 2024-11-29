@@ -1,4 +1,5 @@
 import Angle from './../../../common/Angle.js';
+import Arrow from './../../../common/Arrow.js';
 import FigureContainer from './FigureContainer.js';
 
 export default class Figure extends FigureContainer{
@@ -75,14 +76,22 @@ export default class Figure extends FigureContainer{
 		this.rect.cy=value.y;
 	}
 
+	//для перегорнутих фігур розміри мають бути також >0
+	get width(){
+		return Math.abs(this.rect.width)
+	}
+	get height(){
+		return Math.abs(this.rect.height)
+	}
+
 	get rectBounds(){
-		//межі фігури без урахування куту оберту
+		//межі фігури без урахування куту оберту та від'ємності розмірів
 		const c=this.center;
 		return {
-			x0:c.x-this.rect.width/2,
-			x1:c.x+this.rect.width/2,
-			y0:c.y-this.rect.height/2,
-			y1:c.y+this.rect.height/2,
+			x0:c.x-this.width/2,//.rect
+			x1:c.x+this.width/2,//.rect
+			y0:c.y-this.height/2,//.rect
+			y1:c.y+this.height/2,//.rect
 		}
 	}
 
@@ -108,7 +117,46 @@ export default class Figure extends FigureContainer{
 		let p={x,y};//pointer
 		Angle.rotate2D(c,p,-this.rect.angle);
 		const b=this.rectBounds;
-		return (b.x0<=p.x && p.x<=b.x1) && (b.y0<=p.y && p.y<=b.y1);
+		return (b.x0-CURSOR_RADIUS<=p.x && p.x<=b.x1+CURSOR_RADIUS) && (b.y0-CURSOR_RADIUS<=p.y && p.y<=b.y1+CURSOR_RADIUS);
+	}
+
+	calcBorderLook(x,y,CURSOR_RADIUS=0){
+		let c=this.center;
+		let p={x,y};//pointer
+		Angle.rotate2D(c,p,-this.rect.angle);
+		const b=this.rectBounds;
+
+		let j=1, i=1;
+		//  -1      0      1      2       3
+		//  out   border  fig   border   out
+		if(p.x<b.x0-CURSOR_RADIUS)
+			j=-1
+		else if(p.x<b.x0+CURSOR_RADIUS)
+			j=0
+		else if(p.x<b.x1-CURSOR_RADIUS)
+			j=1
+		else if(p.x<=b.x1+CURSOR_RADIUS)
+			j=2
+		else
+			j=3;
+		if(j<0 || j>2)
+			return -1;//out
+
+		if(p.y<b.y0-CURSOR_RADIUS)
+			i=-1
+		else if(p.y<b.y0+CURSOR_RADIUS)
+			i=0
+		else if(p.y<b.y1-CURSOR_RADIUS)
+			i=1
+		else if(p.y<=b.y1+CURSOR_RADIUS)
+			i=2
+		else
+			i=3;
+		if(i<0 || i>2)
+			return -1;//out
+
+		let look = Arrow.pointSect[i][j];
+		return look;
 	}
 
 	changeParamsCascade(delta={dx:0, dy:0, dw:1, dh:1, dangle:0}){//px, px, 100%, 100%, rad
@@ -123,9 +171,9 @@ export default class Figure extends FigureContainer{
 
 			figure.rect.cx+=delta.dx;
 			figure.rect.cy+=delta.dy;
-			//для перегорнутих фігур розміри мають бути також >0
-			figure.rect.width*=Math.abs(delta.dw);
-			figure.rect.height*=Math.abs(delta.dh);
+			//для перегорнутих фігур розміри залишаються <0
+			figure.rect.width*=delta.dw;
+			figure.rect.height*=delta.dh;
 			figure.rect.angle+=delta.dangle;
 
 			figure.points.forEach(point=>{
@@ -207,6 +255,28 @@ export default class Figure extends FigureContainer{
 			//if the figure is integrated
 			this.params.cx+=dx;
 			this.params.cy+=dy;
+		}
+	}
+
+	resize(dx,dy, look, bCascade=true){
+		//переделать: только рамку, рамку с собств айтемами, каскадом со всеми подфигурами
+		let c=this.center;
+		let p={x:dx,y:dy};//pointer
+		Angle.rotate2D({x:0, y:0}, p, -this.rect.angle);
+
+		if(bCascade){
+			let signW = Math.sign(this.rect.width);
+			let signH = Math.sign(this.rect.height);
+			let params={
+				cx:this.rect.cx+dx/2,
+				cy:this.rect.cy+dy/2,
+				width:(this.rect.width + Arrow.step(look).dx * p.x*signW),
+				height:(this.rect.height + Arrow.step(look).dy * p.y*signH),
+				angle:this.rect.angle,
+			};
+			this.setParamsCascade(params);
+		}
+		else{
 		}
 	}
 

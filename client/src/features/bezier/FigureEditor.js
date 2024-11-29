@@ -204,7 +204,11 @@ class FigureEditor extends React.Component{
 							break;
 						};
 
-						changed=this.moveItem(x,y);//curr
+						if(editor.curr.look!==undefined)
+							changed=this.resizeItem(x,y);//curr
+						else
+							changed=this.moveItem(x,y);//curr
+						editor.curr.look=undefined;
 						break;
 					case 'Figure':
 						changed=this.addFigure(x,y);
@@ -284,6 +288,29 @@ class FigureEditor extends React.Component{
 		return changed;
 	}
 
+	resizeItem(x,y){
+		//Розтягування елемента на canvas-і
+		let changed=false;
+		const dx=x-this.bezier.editor.oldPoint.x;
+		const dy=y-this.bezier.editor.oldPoint.y;
+		if(!dx && !dy)
+			return changed;
+
+		const curr = this.bezier.editor.curr;
+		if(curr.look<0 || curr.look>7)
+			return changed;
+
+		if(curr.figure){
+			//Переміщення фігури
+			const bCascade=true;//разом з підфігурами
+
+			curr.figure.resize(dx,dy, curr.look, bCascade);
+			changed=true;
+		};
+
+		return changed;
+	}
+
 	choiceBy(x,y){
 		//console.log('choiceBy',x,y,'//Обрання елемента');
 		let found;
@@ -301,6 +328,14 @@ class FigureEditor extends React.Component{
 			if(old_curr.spline && !editor.curr.spline && editor.curr.point){
 				if(old_curr.spline.points.indexOf(editor.curr.point)>=0)//leverPoint
 					editor.curr.spline=old_curr.spline;//зберегти сплайн
+			};
+			if(editor.curr.figure){
+				//isNear
+				let look = editor.curr.figure.calcBorderLook(x,y,editor.settings.CURSOR_RADIUS);
+				if(look>=0 && look<8){
+					editor.curr.look = look;
+					//start figure resizing
+				};
 			};
 
 		} catch(e) {
@@ -395,6 +430,7 @@ class FigureEditor extends React.Component{
 		editor.curr.figure=original;
 		editor.curr.layer.figures.push(editor.curr.figure);
 		this.setState({mainFigure:original});
+		this.setCurr();
 		let changed=true;
 		return changed;
 	}

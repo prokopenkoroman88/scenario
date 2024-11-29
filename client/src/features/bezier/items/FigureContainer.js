@@ -42,8 +42,8 @@ export default class FigureContainer{
 	byPath(path){
 		let figurePath = new FigurePath(path);
 		let item = figurePath.findItemIn(this);
-		console.log('byPath', path, figurePath, item);
-		return figurePath.findItemIn(this);
+		//console.log('byPath', path, figurePath, item);
+		return item;
 	}
 
 	namesIndices(attr, names){
@@ -76,7 +76,7 @@ export default class FigureContainer{
 
 	byNames(attr, names){
 		let indices=this.namesIndices(attr, names);
-		console.log('byNames',attr,names,indices);
+		//console.log('byNames',attr,names,indices);
 		return this.byIndices(attr, indices);
 	}
 
