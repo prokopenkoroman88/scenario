@@ -7,14 +7,44 @@ export default class Rotor extends CustomPoint {
 
 	get array(){ return 'rotors'; }
 
-	constructor(ownerFigure,x,y,angle=0){
-		super(ownerFigure,x,y);
+	init(){
+		super.init();
 		this.mainAngle = 0;//кут, отриманий від конфігурації старших роторів, за ним знаходитья lever, коли angle = 0
-		this.angle = angle;//власний кут
+		this.angle = 0;//власний кут
 		this.points = [];
 		this.nodes = [];
 		this.rotors = [];
 	}
+
+	setRecord(value){
+		super.setRecord(value);
+		this.setFields(value, 'angle');
+	}
+
+	getRecord(){
+		let record=super.getRecord();
+		this.getFields(record, 'angle');
+		return record;
+	}
+
+	linkItems(points, nodes, rotors){
+		this.points = this.getPoints(points);
+		this.nodes = this.getNodes(nodes);
+		this.rotors = this.getRotors(rotors);
+	}
+
+	getPoints(points){
+		return this.ownFigure.getItems('point', points);
+	}
+
+	getNodes(nodes){
+		return this.ownFigure.getItems('node', nodes);
+	}
+
+	getRotors(rotors){
+		return this.ownFigure.getItems('rotor', rotors);
+	}
+
 
 	shift(dx,dy,bCascade=true){
 		super.shift(dx,dy);

@@ -53,57 +53,64 @@ class Editor{
 		this.initMainFigureRect();
 	}
 
-	addPoint(x,y,width=1,color='#000'){
-		this.curr.point = new Point(this.curr.figure, x,y, width,color);
+	addPoint(record){
+		this.curr.point = new Point(this.curr.figure, record);
 		this.curr.figure.points.push(this.curr.point);
 		return this.curr.point;
 	}
 
 	copyPoint(point){
-		let copy = this.addPoint(point.x, point.y, point.width, point.color);
+		let copy = this.addPoint(point.record);
 		return copy;
 	}
 
-	loadPoint(x,y,width,color){
-		let point = this.addPoint(x,y,width,color);
+	loadPoint(record){
+		let point = this.addPoint(record);
 	}
 
-	addRotor(x,y,angle=0){
-		this.curr.rotor = new Rotor(this.curr.figure, x,y, angle);
+	addRotor(record){
+		this.curr.rotor = new Rotor(this.curr.figure, record);
 		this.curr.figure.rotors.push(this.curr.rotor);
 		return this.curr.rotor;
 	}
 
+	linkRotor(points=[], nodes=[], rotors=[]){
+		if(points.length)
+			points = this.preparePoints(points);
+		if(nodes.length)
+			nodes = this.prepareNodes(nodes);
+		if(rotors.length)
+			rotors = this.prepareRotors(rotors);
+		this.curr.rotor.linkItems(points, nodes, rotors);
+	}
+
 	makeRotor(x,y){
-		this.addRotor(x,y,0);
-		this.addLever(x,y-20, this.curr.rotor);
+		this.addRotor({x,y,angle:0});
+		this.addLever({x,y:y-20}, this.curr.rotor);
 		return true;
 	}
 
 	copyRotor(rotor){
-		let copy = this.addRotor(rotor.x, rotor.y, rotor.angle);
+		let copy = this.addRotor(rotor.record);
 		if(rotor.lever)
-			this.addLever(rotor.lever.x, rotor.lever.y, copy);
-		copy.points = this.preparePoints(rotor.pointIds);
-		copy.nodes = this.prepareNodes(rotor.nodeIds);
-		copy.rotors = this.prepareRotors(rotor.rotorIds);
+			this.addLever(rotor.lever.record, copy);
+		this.linkRotor(rotor.pointIds, rotor.nodeIds, rotor.rotorIds);
 		return copy;
 	}
 
-	loadRotor(x,y, angle, points=[], nodes=[], rotors=[]){
-		let rotor = this.addRotor(x,y,angle);
+	loadRotor(record, points=[], nodes=[], rotors=[]){
+		let rotor = this.addRotor(record);
 		let leverPoint = rotor.leverPoint;//вже з урахуванням кута
-		let lever = this.addLever(leverPoint.x, leverPoint.y, rotor);
-		rotor.points = this.preparePoints(points);
-		rotor.nodes = this.prepareNodes(nodes);
-		rotor.rotors = this.prepareRotors(rotors);
+		let lever = this.addLever(leverPoint.record, rotor);
+		this.linkRotor(points, nodes, rotors);
 		return rotor;
 	}
 
-	addLever(x,y, rotor=null){
+	addLever(record, rotor=null){
 		if(!rotor)
 			rotor=this.curr.rotor;
-		this.curr.lever = new Lever(this.curr.figure, x,y, rotor);
+		this.curr.lever = new Lever(this.curr.figure, record);
+		this.curr.lever.linkRotor(rotor);
 		this.curr.figure.levers.push(this.curr.lever);
 		return this.curr.lever;
 	}
@@ -111,30 +118,34 @@ class Editor{
 	//copyLever(lever){} виконується в copyRotor
 	//loadLever(x,y, rotor){} виконується в loadRotor
 
-	addNode(x,y){
-		this.curr.node = new Node(this.curr.figure, x,y);
+	addNode(record){
+		this.curr.node = new Node(this.curr.figure, record);
 		this.curr.figure.nodes.push(this.curr.node);
 		return this.curr.node;
 	}
 
 	copyNode(node){
-		let copy = this.addNode(node.x, node.y);
+		let copy = this.addNode(node.record);
 		return copy;
 	}
 
-	loadNode(x,y){
-		let node = this.addNode(x,y);
+	loadNode(record){
+		let node = this.addNode(record);
 		return node;
 	}
 
-	addBranch(nodes=[],points=[]){
+	addBranch(record){
+		this.curr.branch = new Branch(this.curr.figure, record);
+		this.curr.figure.branches.push(this.curr.branch);
+		return this.curr.branch;
+	}
+
+	linkBranch(nodes=[],points=[]){
 		if(nodes.length)
 			nodes = this.prepareNodes(nodes);
 		if(points.length)
 			points = this.preparePoints(points);
-		this.curr.branch = new Branch(this.curr.figure, nodes, points);
-		this.curr.figure.branches.push(this.curr.branch);
-		return this.curr.branch;
+		this.curr.branch.linkItems(nodes, points);
 	}
 
 	makeBranch(x,y){
@@ -142,28 +153,30 @@ class Editor{
 		let node=this.getNode(x,y);//find or new
 		this.sequence.push(node);
 		if(this.sequence.length==branchLength){
-			this.addBranch(this.sequence);
+			this.addBranch();
+			this.linkBranch(this.sequence);
 			this.sequence.splice(0,branchLength-1)
 			return true;
 		}
 	}
 
 	copyBranch(branch){
-		let copy = this.addBranch(branch.nodeIds, branch.pointIds);
+		let copy = this.addBranch(branch.record);
+		this.linkBranch(branch.nodeIds, branch.pointIds);
 		copy.parent = branch;
-		copy.name = branch.name;
 		return copy;
 	}
 
-	loadBranch(nodes=[],points=[]){
-		let branch = this.addBranch(nodes, points);
+	loadBranch(record,nodes=[],points=[]){
+		let branch = this.addBranch(record);
+		this.linkBranch(nodes, points);
 		return branch;
 	}
 
 	getPoint(x,y){
 		let point;
 		if(!this.findCurr(x,y, 'point'))//changes curr!
-			point=this.addPoint(x,y);//new
+			point=this.addPoint({x,y});//new
 		else
 			point=this.curr.point;//find
 		return point;
@@ -172,7 +185,7 @@ class Editor{
 	getNode(x,y){
 		let node;
 		if(!this.findCurr(x,y, 'node'))//changes curr!
-			node=this.addNode(x,y);//new
+			node=this.addNode({x,y});//new
 		else
 			node=this.curr.node;//find
 		return node;
@@ -181,135 +194,96 @@ class Editor{
 	preparePoints(points){
 		if(!points)
 			return points;
-		points=points.map((point)=>{
+		points=this.curr.figure.getItems('point', points, (point)=>{
 			let res;
-			switch (typeof point) {
-				case 'object': {
-					if(point.ownFigure)
-						res = point;//by Point
-					else {
 						let id = -1;
 						//if(this.needFind)
 							id = this.findByCoords('point', point.x, point.y).point;//by {x,y}
 						if(id>=0)
 							res = this.curr.figure.points[id];//find
 						else
-							res = this.addPoint(point.x, point.y);//new
-					};
-				}; break;
-				case 'number': res = this.curr.figure.points[point]; break;//by id
-				case 'string': res = this.curr.figure.point(point); break;//by name
-			};
+							res = this.addPoint(point);//new {x,y}
 			return res;
-		},this);
+		});
 		return points;
 	}
 
 	prepareRotors(rotors){
 		if(!rotors)
 			return rotors;
-		rotors=rotors.map((rotor)=>{
+		rotors=this.curr.figure.getItems('rotor', rotors, (rotor)=>{
 			let res;
-			switch (typeof rotor) {
-				case 'object': {
-					if(rotor.ownFigure)
-						res = rotor;//by Point
-					else {
 						let id = -1;
 						//if(this.needFind)
 							id = this.findByCoords('rotor', rotor.x, rotor.y).rotor;//by {x,y}
 						if(id>=0)
 							res = this.curr.figure.rotors[id];//find
 						else
-							res = this.addRotor(rotor.x, rotor.y);//new
-					};
-				}; break;
-				case 'number': res = this.curr.figure.rotors[rotor]; break;//by id
-				case 'string': res = this.curr.figure.rotor(rotor); break;//by name
-			};
+							res = this.addRotor(rotor);//new {x,y}
 			return res;
-		},this);
+		});
 		return rotors;
 	}
 
 	prepareNodes(nodes){
 		if(!nodes)
 			return nodes;
-		nodes=nodes.map((node)=>{
+		nodes=this.curr.figure.getItems('node', nodes, (node)=>{
 			let res;
-			switch (typeof node) {
-				case 'object': {
-					if(node.ownFigure)
-						res = node;//by node
-					else {
 						let id = -1;
 						//if(this.needFind)
 							id = this.findByCoords('node', node.x, node.y).node;//by {x,y}
 						if(id>=0)
 							res = this.curr.figure.nodes[id];//find
 						else
-							res = this.addNode(node.x, node.y);//new
-					};
-				}; break;
-				case 'number': res = this.curr.figure.nodes[node]; break;//by id
-				case 'string': res = this.curr.figure.node(node); break;//by name
-			};
+							res = this.addNode(node);//new {x,y}
 			return res;
-		},this);
+		});
+
 		return nodes;
 	}
 
-	addSpline(points){//objs or ids or {x,y}
-		points = this.preparePoints(points);
-		this.curr.spline = new Spline(this.curr.figure, points);//newPoint==this.currPoint
+	addSpline(record){
+		this.curr.spline = new Spline(this.curr.figure, record);//newPoint==this.currPoint
 		this.curr.figure.splines.push(this.curr.spline);
 		if(this.curr.curve)
 			this.curr.curve.splines.push(this.curr.spline);
 		return this.curr.spline;
 	}
 
+	linkSpline(points=[]){//objs or ids or {x,y}
+		points = this.preparePoints(points);
+		console.log('points', points);
+		this.curr.spline.linkItems(points);
+	}
+
 	makeSpline(x,y){
 		const splineLength=4;
 		let point=this.getPoint(x,y);//find or new
 		this.sequence.push(point);
+		console.log('sequence', this.sequence);
 		if(this.sequence.length==splineLength){
-			this.addSpline(this.sequence);
+			this.addSpline();
+			this.linkSpline(this.sequence);
 			this.sequence.splice(0,splineLength-1)
 			return true;
 		}
 	}
 
 	copySpline(spline){
-		let copy = this.addSpline(spline.pointIds);
+		let copy = this.addSpline(spline.record);
+		this.linkSpline(spline.pointIds);
 		return copy;
 	}
 
-	loadSpline(points){
-		let spline = this.addSpline(points);
+	loadSpline(record, points){
+		let spline = this.addSpline(record);
+		this.linkSpline(points);
 		return spline;
 	}
 
-	prepareSplines(splines){
-		if(!splines)
-			return splines;
-		splines=splines.map((spline)=>{
-			let res;
-			switch (typeof spline) {
-				case 'object': {
-					if(spline.ownFigure)
-						res = spline;//by Point
-				}; break;
-				case 'number': res = this.curr.figure.splines[spline]; break;//by id
-				case 'string': res = this.curr.figure.spline(spline); break;//by name
-			};
-			return res;
-		},this);
-		return splines;
-	}
-
-	addCurve(splines){
-		splines = this.prepareSplines(splines);
-		this.curr.curve = new Curve(this.curr.figure, splines);
+	addCurve(record){
+		this.curr.curve = new Curve(this.curr.figure, record);
 		if(!this.curr.figure){
 			if(!this.curr.layer)
 				this.curr.layer = this.content.layers[0];
@@ -319,21 +293,20 @@ class Editor{
 		return this.curr.curve;
 	}
 
+	linkCurve(splines=[]){
+		this.curr.curve.linkItems(splines);
+	}
+
 	copyCurve(curve){
-		let copy = this.addCurve(curve.splineIds);
-		copy.color=curve.color;
+		let copy = this.addCurve(curve.record);
+		this.linkCurve(curve.splineIds);
 		return copy;
 	}
 
-	loadCurve(splines, color){
-		let curve = this.addCurve(splines);
-		curve.color = color;
+	loadCurve(record, splines){
+		let curve = this.addCurve(record);
+		this.linkCurve(splines);
 		return curve;
-	}
-
-	insertSplinesToCurve(splines, start=0){
-		splines = this.prepareSplines(splines);
-		this.curr.curve.splines.splice(start, 0, ...splines);
 	}
 
 	addFigure(subFigure=false){

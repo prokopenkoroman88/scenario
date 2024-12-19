@@ -39,54 +39,6 @@ class BezierPool{
 		editor.curr.figure=figure;
 	}
 
-/*
-	saveFigureToCode(figure){
-		let s=`\n//${figure.name}`;
-
-		figure.points.forEach((point)=>{
-			s+=`\n\t\t\teditor.loadPoint(${point.x},${point.y}, ${point.width}, '${point.color}');`;
-		});
-
-		s+='\n';
-		figure.nodes.forEach((node)=>{
-			s+=`\n\t\t\teditor.loadNode(${node.x},${node.y});`;
-		});//nodes must be before rotors
-
-		s+='\n';
-		figure.rotors.forEach((rotor)=>{
-			s+=`\n\t\t\teditor.loadRotor(${rotor.x},${rotor.y}, ${rotor.angle}, [${rotor.pointIds}], [${rotor.nodeIds}], [${rotor.rotorIds}]);`;
-		});
-
-		s+='\n';
-		figure.branches.forEach((branch)=>{
-			s+=`\n\t\t\teditor.loadBranch([${branch.nodeIds}], [${branch.pointIds}]);`;
-		});
-
-		s+='\n';
-		figure.splines.forEach((spline)=>{
-			s+=`\n\t\t\teditor.loadSpline([${spline.pointIds}]);`;
-		});
-
-		s+='\n';
-		figure.curves.forEach((curve)=>{
-			s+=`\n\t\t\teditor.loadCurve([${curve.splineIds}], '${curve.color}');`;
-		});
-
-		s+='\n';
-		figure.figures.forEach((figure)=>{
-			let params = figure.params;
-			if(!params){
-				params = figure.rect;
-				params.name = figure.name;
-			};
-			let sParams = JSON.stringify(params);
-			s+=`\n\t\t\teditor.integrateFigure( this.figure('${figure.parent.name}'), ${sParams});`;
-		});
-
-		console.log(s);
-	}
-*/
-
 	getIndent(indentLength=0){
 		let indent='';
 		for(let i=0; i<indentLength; i++)
@@ -95,6 +47,10 @@ class BezierPool{
 	}
 
 	saveFigureItemsToCode(figure, indentLength=0){
+
+		function rec(item){
+			return JSON.stringify(item.record);
+		}
 
 		function saveItems(attr, getParams=null){
 			let arr = figure.constructor.arrName(attr);
@@ -113,12 +69,12 @@ class BezierPool{
 		let s='';
 		let indents=this.getIndent(indentLength);
 
-		saveItems('point', (point)=>`${point.x},${point.y}, ${point.width}, '${point.color}'`);
-		saveItems('node', (node)=>`${node.x},${node.y}`);//nodes must be before rotors
-		saveItems('rotor', (rotor)=>`${rotor.x},${rotor.y}, ${rotor.angle}, [${rotor.pointIds}], [${rotor.nodeIds}], [${rotor.rotorIds}]`);
-		saveItems('branch', (branch)=>`[${branch.nodeIds}], [${branch.pointIds}]`);
-		saveItems('spline', (spline)=>`[${spline.pointIds}]`);
-		saveItems('curve', (curve)=>`[${curve.splineIds}], '${curve.color}'`);
+		saveItems('point', (point)=>`${rec(point)}`);
+		saveItems('node', (node)=>`${rec(node)}`);//nodes must be before rotors
+		saveItems('rotor', (rotor)=>`${rec(rotor)}, [${rotor.pointIds}], [${rotor.nodeIds}], [${rotor.rotorIds}]`);
+		saveItems('branch', (branch)=>`${rec(branch)}, [${branch.nodeIds}], [${branch.pointIds}]`);
+		saveItems('spline', (spline)=>`${rec(spline)}, [${spline.pointIds}]`);
+		saveItems('curve', (curve)=>`${rec(curve)}, [${curve.splineIds}]`);
 		//saveItems('point', (point)=>``);
 
 		if(!figure.figures.length)

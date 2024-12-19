@@ -33,6 +33,25 @@ export default class FigureContainer{
 		return this.byIndex(attr, index);
 	}
 
+	byObject(item, getter){
+		if(item.ownFigure)//&& item.ownFigure==this
+			return item;
+		if(getter)
+			return getter(item);
+	}
+
+	getItems(attr, items, getter){
+		items=items.map((item)=>{
+			switch (typeof item) {
+				case 'object': return this.byObject(item, getter);
+				case 'number': return this.byIndex(attr, item);
+				case 'string': return this.byName(attr, item);
+			};
+		},this);
+		return items;
+		//[point, 3, 'p1',] -> [point, point, point,]
+	}
+
 	pathIndices(path){
 		let figurePath = new FigurePath(path);
 		figurePath.findItemIn(this);

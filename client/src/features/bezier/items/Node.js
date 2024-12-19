@@ -4,10 +4,6 @@ export default class Node extends CustomPoint {
 
 	get array(){ return 'nodes'; }
 
-	constructor(ownerFigure,x,y){
-		super(ownerFigure,x,y);
-	}
-
 	get branches(){
 		//find branches of node:
 		return this.getOwners('branches');

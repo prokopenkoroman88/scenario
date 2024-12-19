@@ -7,8 +7,40 @@ export default class FigureItem{
 
 	get index(){ return this.ownFigure[this.array].indexOf(this); }
 
-	constructor(ownerFigure){
+	constructor(ownerFigure, record){
 		this.ownFigure=ownerFigure;
+		if(this.init)
+			this.init();
+		if(record)
+			this.record=record;
+	}
+
+	setFields(record, fieldNames){
+		fieldNames.split(' ').forEach(field=>{
+			if(record[field]!==undefined)
+				this[field]=record[field]
+		})
+	}
+
+	getFields(record, fieldNames){
+		fieldNames.split(' ').forEach(field=>{
+			if(this[field]!==undefined)
+				record[field]=this[field]
+		})
+	}
+
+	set record(value){this.setRecord(value)}
+
+	setRecord(value){
+		this.setFields(value, 'id name');
+	}
+
+	get record(){return this.getRecord()}
+
+	getRecord(){
+		let record={};
+		this.getFields(record, 'id name');
+		return record;
 	}
 
 	getIds(arrName){

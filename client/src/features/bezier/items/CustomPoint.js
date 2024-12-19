@@ -3,10 +3,21 @@ import FigureItem from './FigureItem.js';
 
 export default class CustomPoint extends FigureItem{
 
-	constructor(ownerFigure,x,y){
-		super(ownerFigure);
-		this.x = x;
-		this.y = y;
+	init(){
+		this.x=0;
+		this.y=0;
+	}
+
+	setRecord(value){
+		super.setRecord(value);
+		this.setFields(value, 'x y');
+	}
+
+	getRecord(){
+		let record=super.getRecord();
+		this.round(1);
+		this.getFields(record, 'x y');
+		return record;
 	}
 
 	shift(dx,dy){

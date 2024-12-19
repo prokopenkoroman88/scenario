@@ -6,10 +6,14 @@ export default class Branch extends FigureItem{
 
 	get array(){ return 'branches'; }
 
-	constructor(ownerFigure, nodes, points){
-		super(ownerFigure);
-		this.nodes=nodes;//[0,1]
-		this.points=points;
+	init(){
+		this.nodes=[];
+		this.points=[];
+	}
+
+	linkItems(nodes, points){
+		this.nodes=this.getNodes(nodes);//[0,1]
+		this.points=this.getPoints(points);
 		this.prepare();
 	}
 
@@ -19,6 +23,14 @@ export default class Branch extends FigureItem{
 
 	get pointIds(){
 		return this.getIds('points');
+	}
+
+	getNodes(nodes){
+		return this.ownFigure.getItems('node', nodes);
+	}
+
+	getPoints(points){
+		return this.ownFigure.getItems('point', points);
 	}
 
 	prepareRect(){

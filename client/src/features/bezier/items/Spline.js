@@ -6,21 +6,17 @@ export default class Spline extends FigureItem{
 
 	get array(){ return 'splines'; }
 
-	constructor(ownerFigure,points){
-		super(ownerFigure);
+	init(){
+		this.points=[];
+	}
 
-		points=points.map((point)=>{
-			let res;
-			switch (typeof point) {
-				case 'object': res = point; break;
-				case 'number': res = ownerFigure.points[point]; break;
-				case 'string': res = ownerFigure.point(point); break;
-			};
-			return res;
-		},this);
-
-		this.points=points;//point0,point1
+	linkItems(points){
+		this.points=this.getPoints(points);//point0,point1
 		this.prepare();
+	}
+
+	getPoints(points){
+		return this.ownFigure.getItems('point', points);
 	}
 
 	prepareRect(){

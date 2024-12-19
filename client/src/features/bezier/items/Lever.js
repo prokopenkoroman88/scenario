@@ -5,8 +5,7 @@ export default class Lever extends CustomPoint {
 
 	get array(){ return 'levers'; }
 
-	constructor(ownerFigure,x,y,rotor=null){
-		super(ownerFigure,x,y);
+	linkRotor(rotor=null){
 		this.rotor = rotor;
 		if(this.rotor)
 			this.rotor.lever=this;
