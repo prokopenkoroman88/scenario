@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import logo from './logo.svg';
 import './App.css';
-import Client from './Client.js'
+import Client from './Client.jsx'
 
 function App() {
 	return (
 		<div className="App">
-			<Client
-			>
-			</Client>
+			<Client/>
 			<footer></footer>
 		</div>
 	);

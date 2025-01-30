@@ -1,16 +1,16 @@
 import Angle from './../../common/Angle.js';
 //items:
-//import Rect from './items/Rect.js';
-//import FigureItem from './items/FigureItem.js';
-//import CustomPoint from './items/CustomPoint.js';
-import Point from './items/Point.js';
-import Rotor from './items/Rotor.js';
-import Lever from './items/Lever.js';
-import Node from './items/Node.js';
-import Branch from './items/Branch.js';
-import Spline from './items/Spline.js';
-import Curve from './items/Curve.js';
-//import FigureContainer from './items/FigureContainer.js';
+//import Rect from './items/common/Rect.js';
+//import FigureItem from './items/custom/FigureItem.js';
+//import CustomPoint from './items/custom/CustomPoint.js';
+import Point from './items/figure/Point.js';
+import Rotor from './items/figure/Rotor.js';
+import Lever from './items/figure/Lever.js';
+import Node from './items/figure/Node.js';
+import Branch from './items/figure/Branch.js';
+import Spline from './items/figure/Spline.js';
+import Curve from './items/figure/Curve.js';
+//import FigureContainer from './items/custom/FigureContainer.js';
 import Figure from './items/Figure.js';
 import Layer from './items/Layer.js';
 import Content from './items/Content.js';
@@ -888,7 +888,7 @@ class Render{
 };
 
 
-class Bezier{
+class Picture{
 
 	constructor(canvas=null){
 		this.canvas=canvas;
@@ -912,4 +912,4 @@ class Bezier{
 };
 
 
-export { Bezier };
+export default Picture;

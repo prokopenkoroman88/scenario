@@ -1,4 +1,4 @@
-import Angle from './../../../common/Angle.js';
+import Angle from './../../../../common/Angle.js';
 import FigureItem from './FigureItem.js';
 
 export default class CustomPoint extends FigureItem{

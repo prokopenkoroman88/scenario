@@ -1,4 +1,4 @@
-import CustomPoint from './CustomPoint.js';
+import CustomPoint from './../custom/CustomPoint.js';
 
 export default class Point extends CustomPoint{
 

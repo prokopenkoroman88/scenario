@@ -1,20 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { CustomEditor } from './../../common/editor/CustomEditor.js';
-import { Bezier } from './Bezier.js';
+import Picture from './Picture.js';
 import Screen from './../canvas/Screen.js';
 
 import Drag from './../../common/drag/Drag.js'
 import Container from './../../common/drag/Container.js'
 
-import { FiguresTable } from './data/Figures.js';
-import { BezierTree } from './BezierTree.js';
 
 class FigureEditor extends React.Component{
 	constructor(props){
 		super(props);
 		//rect
-		//bezier?
+		//picture?
 		//pool
 		//figure
 		this.state={
@@ -35,10 +33,10 @@ class FigureEditor extends React.Component{
 			},
 		};
 		this.drag=new Drag();
-		if(this.props.bezier)
-			this.bezier = this.props.bezier;
+		if(this.props.picture)
+			this.picture = this.props.picture;
 		else
-			this.bezier = new Bezier(this.state.canvas.obj);
+			this.picture = new Picture(this.state.canvas.obj);
 		this.pool = this.props.pool;
 	}
 
@@ -48,22 +46,22 @@ class FigureEditor extends React.Component{
 		//console.log('mode',mode);
 		switch (mode) {
 			case 'Arrow':
-				this.bezier.editor.sequence=[];
+				this.picture.editor.sequence=[];
 				break;
 			case 'Rotor':
-				this.bezier.editor.sequence=[];
+				this.picture.editor.sequence=[];
 				break;
 			case 'Branch':
-				this.bezier.editor.sequence=[];
+				this.picture.editor.sequence=[];
 				break;
 			case 'Spline':
-				this.bezier.editor.sequence=[];
+				this.picture.editor.sequence=[];
 				break;
 			case 'Figure':
-				this.bezier.editor.sequence=[];
+				this.picture.editor.sequence=[];
 				break;
 			case 'Integrate':
-				this.bezier.editor.sequence=[];
+				this.picture.editor.sequence=[];
 				this.props.figure.open();
 				this.props.figure.link({
 					onOK:null,
@@ -90,7 +88,7 @@ class FigureEditor extends React.Component{
 
 	setCurr(){
 		//Для відображення вибраного елементу у BezierTree
-		let curr=this.bezier.editor.curr;
+		let curr=this.picture.editor.curr;
 		this.setState({curr});
 		this.clickPaint();
 	}
@@ -101,7 +99,7 @@ class FigureEditor extends React.Component{
 				canvas: { ...prevState.canvas, ref, obj}
 			})
 		);
-		this.bezier.setCanvas(obj);
+		this.picture.setCanvas(obj);
 	}
 
 //==========
@@ -118,14 +116,14 @@ class FigureEditor extends React.Component{
 		let changed=false;
 		let x=event.offsetX;
 		let y=event.offsetY;
-		const editor=this.bezier.editor;
+		const editor=this.picture.editor;
 		const old_curr={...editor.curr};
 		let sequence=editor.sequence;
 		//console.log('event', x, y, event.altKey?'Alt':'', event.ctrlKey?'Ctrl':'', event.shiftKey?'Shift':'');
 		switch (event.type) {
 			case 'mousedown':
 				this.props.figure.close();
-				this.bezier.editor.oldPoint={x,y};
+				this.picture.editor.oldPoint={x,y};
 				switch (this.state.mode) {
 					case 'Arrow':
 						changed=this.choiceBy(x,y);//curr
@@ -225,7 +223,7 @@ class FigureEditor extends React.Component{
 				break;
 		};
 		if(changed){
-			this.setState({content:this.bezier.content});
+			this.setState({content:this.picture.content});
 			this.clickPaint();
 		}
 	}
@@ -235,13 +233,13 @@ class FigureEditor extends React.Component{
 	moveItem(x,y){
 		//Переміщення елемента на canvas-і
 		let changed=false;
-		const dx=x-this.bezier.editor.oldPoint.x;
-		const dy=y-this.bezier.editor.oldPoint.y;
+		const dx=x-this.picture.editor.oldPoint.x;
+		const dy=y-this.picture.editor.oldPoint.y;
 		if(!dx && !dy)
 			return changed;
 
-		const curr = this.bezier.editor.curr;
-		const sequence = this.bezier.editor.sequence;
+		const curr = this.picture.editor.curr;
+		const sequence = this.picture.editor.sequence;
 		if(sequence.length){
 			sequence.forEach((item)=>{
 				const bCascade=true;
@@ -291,12 +289,12 @@ class FigureEditor extends React.Component{
 	resizeItem(x,y){
 		//Розтягування елемента на canvas-і
 		let changed=false;
-		const dx=x-this.bezier.editor.oldPoint.x;
-		const dy=y-this.bezier.editor.oldPoint.y;
+		const dx=x-this.picture.editor.oldPoint.x;
+		const dy=y-this.picture.editor.oldPoint.y;
 		if(!dx && !dy)
 			return changed;
 
-		const curr = this.bezier.editor.curr;
+		const curr = this.picture.editor.curr;
 		if(curr.look<0 || curr.look>7)
 			return changed;
 
@@ -315,7 +313,7 @@ class FigureEditor extends React.Component{
 		//console.log('choiceBy',x,y,'//Обрання елемента');
 		let found;
 		try {
-			const editor=this.bezier.editor;
+			const editor=this.picture.editor;
 			const old_curr={...editor.curr};
 			editor.findCurr(x,y, 'point');
 			editor.findCurr(x,y, 'rotor');
@@ -350,7 +348,7 @@ class FigureEditor extends React.Component{
 	getCurrItem(curr=null){
 		let item=null;
 		if(!curr)
-			curr=this.bezier.editor.curr;
+			curr=this.picture.editor.curr;
 		if(!item)
 			item=curr.point;
 		if(!item)
@@ -361,7 +359,7 @@ class FigureEditor extends React.Component{
 	}
 
 	addSequenceTo(main_item){
-		let sequence=this.bezier.editor.sequence;
+		let sequence=this.picture.editor.sequence;
 		if(!sequence.length)
 			return;
 		sequence.forEach(item=>{
@@ -382,22 +380,22 @@ class FigureEditor extends React.Component{
 	}
 
 	makeRotor(x,y){
-		let changed=this.bezier.editor.makeRotor(x,y);
+		let changed=this.picture.editor.makeRotor(x,y);
 		return changed;
 	}
 
 	makeBranch(x,y){
-		let changed=this.bezier.editor.makeBranch(x,y);
+		let changed=this.picture.editor.makeBranch(x,y);
 		return changed;
 	}
 
 	makeSpline(x,y){
-		let changed=this.bezier.editor.makeSpline(x,y);
+		let changed=this.picture.editor.makeSpline(x,y);
 		return changed;
 	}
 
 	addFigure(x,y){
-		let editor=this.bezier.editor;
+		let editor=this.picture.editor;
 		let figure = editor.addFigure(true);
 		let changed = !!figure;
 		let params={
@@ -415,7 +413,7 @@ class FigureEditor extends React.Component{
 	}
 
 	openFigure(){
-		let editor=this.bezier.editor;
+		let editor=this.picture.editor;
 		let figureName=this.props.figure.name;
 		let original=this.pool.figure(figureName);
 		let params={
@@ -438,7 +436,7 @@ class FigureEditor extends React.Component{
 	integrateFigure(x,y){
 		//Інтегрування фігури в поточну фігуру curr.figure
 		//фігура м.б. перевернутою, коли x < oldPoint.x
-		let editor=this.bezier.editor;
+		let editor=this.picture.editor;
 		let figureName=this.props.figure.name;
 		let original=this.pool.figure(figureName);
 		let params={
@@ -456,19 +454,19 @@ class FigureEditor extends React.Component{
 
 	clickNewPage(){
 		this.setState({mainFigure:null});
-		this.bezier.editor.newPage();
+		this.picture.editor.newPage();
 	}
 
 	clickPaint(){
-		this.bezier.paint();
+		this.picture.paint();
 		this.optionalPaint();
 	}
 
 	optionalPaint(){//by state.show
-		const curr = this.bezier.editor.curr;
-		const sequence = this.bezier.editor.sequence;
-		const content = this.bezier.editor.content;
-		const render = this.bezier.render;
+		const curr = this.picture.editor.curr;
+		const sequence = this.picture.editor.sequence;
+		const content = this.picture.editor.content;
+		const render = this.picture.render;
 		//
 		const colorFigureRect='#aa0000';
 		const colorCurrFigureRect='#ff0000';
@@ -604,7 +602,7 @@ class FigureEditor extends React.Component{
 			if(curr.spline)
 				paintSpline(curr.spline);
 		}
-		//this.bezier.canvas.put();//Після стандартних методів canvas - put не потрібен
+		//this.picture.canvas.put();//Після стандартних методів canvas - put не потрібен
 	}
 
 	clickOpenFigure(){
@@ -618,10 +616,10 @@ class FigureEditor extends React.Component{
 	clickSaveJS(){
 		let s = '';
 		if(this.state.mainFigure){
-			s = this.pool.saveMainFigureToCode(this.bezier.content);
+			s = this.pool.saveMainFigureToCode(this.picture.content);
 		}
 		else{
-			s = this.pool.saveContentToCode(this.bezier.content);
+			s = this.pool.saveContentToCode(this.picture.content);
 		};
 		console.log(s);
 	}
@@ -775,12 +773,6 @@ class FigureEditor extends React.Component{
 					getCanvas={this.handleGetCanvas.bind(this)}
 					onMouse={this.handleMouse.bind(this)}
 				></Screen>
-				{(this.bezier) &&
-					<BezierTree
-						drag={this.drag}
-						bezier={this.bezier}
-					/>
-				}
 				</Container>
 			</CustomEditor>
 		);

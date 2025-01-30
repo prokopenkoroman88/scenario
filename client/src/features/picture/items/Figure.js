@@ -1,6 +1,6 @@
 import Angle from './../../../common/Angle.js';
 import Arrow from './../../../common/Arrow.js';
-import FigureContainer from './FigureContainer.js';
+import FigureContainer from './custom/FigureContainer.js';
 
 export default class Figure extends FigureContainer{
 

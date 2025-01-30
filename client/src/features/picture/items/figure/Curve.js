@@ -1,4 +1,4 @@
-import FigureItem from './FigureItem.js';
+import FigureItem from './../custom/FigureItem.js';
 
 export default class Curve extends FigureItem{
 

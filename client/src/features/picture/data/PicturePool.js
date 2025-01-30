@@ -1,12 +1,14 @@
-import { Bezier } from '../Bezier.js';
+import Picture from '../Picture.js';
 
-class BezierPool{
+class PicturePool{
 
 	constructor(){
-		this.bezier = new Bezier();
-		this.layer = this.bezier.editor.addLayer();
+		this.picture = new Picture();
+		this.layer = this.editor.addLayer();
 		this.figures = [];
 	}
+
+	get editor(){return this.picture.editor}
 
 	nameIndex(name){
 		for(let i=0; i<this.figures.length; i++)
@@ -21,11 +23,11 @@ class BezierPool{
 	}
 
 	addFigure(name,rect,func){
-		let figure = this.bezier.editor.addFigure();
+		let figure = this.editor.addFigure();
 		figure.name=name;
 		figure.rect=rect;
 		figure.rect.angle=0;
-		func(this.bezier.editor);
+		func(this.editor);
 		this.figures.push(figure);
 	}
 
@@ -135,4 +137,4 @@ class BezierPool{
 
 }
 
-export default BezierPool;
+export default PicturePool;

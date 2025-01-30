@@ -1,4 +1,4 @@
-import FigurePath from './FigurePath.js';
+import FigurePath from './../common/FigurePath.js';
 
 export default class FigureContainer{
 

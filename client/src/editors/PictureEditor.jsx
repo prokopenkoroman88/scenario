@@ -1,23 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { Editor } from './Editor.js';
-import { Bezier } from './../features/bezier/Bezier.js';
-import BezierPool from './../features/bezier/data/BezierPool.js';
+import Picture from './../features/picture/Picture.js';
+import PicturePool from './../features/picture/data/PicturePool.js';
 import Screen from './../features/canvas/Screen.js';
 
 import Drag from './../common/drag/Drag.js'
 import Block from './../common/drag/Block.js'
 import Container from './../common/drag/Container.js'
 
-import FigureEditor from './../features/bezier/FigureEditor.js';
-import { FiguresTable } from './../features/bezier/data/Figures.js';
-import FigureSelect from './../features/bezier/controls/FigureSelect.js';
-import { BezierTree } from './../features/bezier/BezierTree.js';
+import FigureEditor from './../features/picture/FigureEditor.jsx';
+import FigureSelect from './../features/picture/controls/FigureSelect.jsx';
 
 const FIGURE_MODE='FigureEditor';
 const DEFAULT_MODE=FIGURE_MODE;
 
-class BezierEditor extends React.Component{
+class PictureEditor extends React.Component{
 	constructor(props){
 		super(props);
 		this.state={
@@ -35,8 +33,8 @@ class BezierEditor extends React.Component{
 			figureSelect:{},
 		};
 		this.drag = new Drag();
-		this.bezier = new Bezier();
-		this.pool = new BezierPool();
+		this.picture = new Picture();
+		this.pool = new PicturePool();
 		this.figureSelect = new FigureSelect(this, this.pool);//initState
 	}
 
@@ -105,7 +103,7 @@ class BezierEditor extends React.Component{
 		return (
 			<Editor
 				client={this.props.client}
-				caption='Bezier editor'
+				caption='Picture editor'
 				css={this.getCSS()}
 				btns={btns}
 			>
@@ -121,4 +119,4 @@ class BezierEditor extends React.Component{
 	};
 }
 
-export default BezierEditor;
+export default PictureEditor;

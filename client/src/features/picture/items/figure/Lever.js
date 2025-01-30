@@ -1,5 +1,5 @@
-import Angle from './../../../common/Angle.js';
-import CustomPoint from './CustomPoint.js';
+import Angle from './../../../../common/Angle.js';
+import CustomPoint from './../custom/CustomPoint.js';
 
 export default class Lever extends CustomPoint {
 

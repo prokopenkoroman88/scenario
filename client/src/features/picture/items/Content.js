@@ -1,4 +1,4 @@
-import FigureContainer from './FigureContainer.js';
+import FigureContainer from './custom/FigureContainer.js';
 
 export default class Content extends FigureContainer{
 

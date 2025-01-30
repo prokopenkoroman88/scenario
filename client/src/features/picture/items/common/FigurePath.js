@@ -1,4 +1,4 @@
-import ItemPath from './../../../common/ItemPath.js';
+import ItemPath from './../../../../common/ItemPath.js';
 
 export default class FigurePath extends ItemPath {
 

@@ -1,6 +1,6 @@
-import Angle from './../../../common/Angle.js';
-import Rect from './Rect.js';
-import FigureItem from './FigureItem.js';
+import Angle from './../../../../common/Angle.js';
+import Rect from './../common/Rect.js';
+import FigureItem from './../custom/FigureItem.js';
 
 export default class Spline extends FigureItem{
 
