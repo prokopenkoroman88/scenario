@@ -15,9 +15,8 @@ import Figure from './items/Figure.js';
 import Layer from './items/Layer.js';
 import Content from './items/Content.js';
 
-function distance(x0,y0,x1,y1){
-	return Math.sqrt(Math.pow(x1-x0,2) + Math.pow(y1-y0,2));
-}
+import PictureRender from './render/PictureRender.js';
+
 
 class Editor{
 	constructor(owner){
@@ -314,6 +313,7 @@ class Editor{
 
 		if(subFigure && this.curr.figure){
 			this.curr.figure.figures.push(figure);
+			figure.ownFigure=this.curr.figure;
 		}
 		else{
 			if(!this.curr.layer)
@@ -563,340 +563,15 @@ class Editor{
 };
 
 
-class Render{
-	constructor(owner, canvas=null){
-		this.owner=owner;
-		this.canvas=canvas;
-		this.rectByCanvas();
-	}
-
-	rectByCanvas(){
-		if(this.canvas)
-			this.rect={
-				top:0,
-				bottom:this.canvas.height-1,
-				left:0,
-				right:this.canvas.width-1,
-			};
-	}
-
-	get content(){ return this.owner.content; }
-
-	paint(canvas=null, rect=null){
-		if(canvas)
-			this.canvas=canvas;
-
-		if(rect)
-			this.rect=rect;
-		if(!this.rect)
-			this.rectByCanvas();
-
-		this.prepare();
-		for(let y=this.rect.top; y<=this.rect.bottom; y++){
-			this.prepare_vert(y);
-			for(let x=this.rect.left; x<=this.rect.right; x++){
-				this.prepare_horiz(x);
-				let rgba = this.prepare_color(x,y);
-				this.canvas.setRGB(x,y,rgba);
-			};//x++
-		};//y++
-		this.canvas.put();
-	}
-
-	prepareLinesByFigure(figure){
-		if(!figure)
-			return;
-
-		function dist(p1,p2){
-			return distance(p1.x,p1.y, p2.x,p2.y);
-		};
-
-
-		const line_length=10;
-
-				figure.splines.forEach( (spline, iSpline) => {
-					let points = spline.points;
-
-					let c=0;
-					for(let i=1; i<points.length; i++)
-						c+=dist(points[i-1],points[i]);
-
-					let oldPoint, newPoint=points[0];
-					let oldDot, newDot=newPoint;
-					let oldDist, newDist=0;
-					function addLine(coeff=1){
-							let line;
-							let delta_y = Math.sign((newDot.y-oldDot.y).toFixed(0));
-							let delta_x = Math.sign((newDot.x-oldDot.x).toFixed(0));
-							if(delta_y<0 || (delta_y==0 && delta_x<0))
-								line={dot1:newDot, dot2:oldDot};
-							if(delta_y>0 || (delta_y==0 && delta_x>0))
-								line={dot1:oldDot, dot2:newDot};
-							if(delta_y==0 && delta_x==0)
-								return;
-							if(!line)
-								return;
-							line.spline=spline;
-							let width=spline.controlPoint[0].width + (spline.controlPoint[1].width-spline.controlPoint[0].width)*coeff;
-							let sin = Math.sin(Math.atan2(line.dot2.y-line.dot1.y, line.dot2.x-line.dot1.x));
-							if(Math.abs(sin)<=0.1)
-								line.width_x = width + Math.abs( line.dot2.x-line.dot1.x );
-							else
-								line.width_x = width / Math.abs( sin );
-
-							if(line.dot1.y<0 || line.dot2.y<0 || line.dot1.y>=this.rows.length || line.dot2.y>=this.rows.length)
-								return;
-
-							if(delta_y==0){
-								this.rows[Math.round(line.dot1.y)].lines.push({line:line, x:line.dot1.x, left:true});
-								this.rows[Math.round(line.dot2.y)].lines.push({line:line, x:line.dot2.x, right:true});
-							}
-							else{
-								this.rows[Math.round(line.dot1.y)].lines.push({line:line, x:line.dot1.x, top:true});
-								this.rows[Math.round(line.dot2.y)].lines.push({line:line, x:line.dot2.x, bottom:true});
-							};
-					};
-
-					for(let i=1; i<=c; i++){
-						oldPoint = newPoint;
-						oldDist = newDist;
-
-						newPoint = Spline.findInterimBezierPoint(points, i/c);
-						newDist=dist(newDot,newPoint);
-
-						while(newDist>=line_length){
-							let distL = line_length-oldDist;
-							let distR = newDist-line_length;
-							oldDot = newDot;
-							newDot = Spline.findInterimPoint(oldPoint, newPoint, distL/(distL + distR)/2 );
-							addLine.bind(this)(i/c);
-
-							newDist=dist(newDot,newPoint);
-						};
-						//this.paintPoint(newPoint,rgba);
-					};///i++
-					//last part:
-					oldDot = newDot;
-					newDot = points[ points.length-1 ];
-					addLine.bind(this)(1);
-
-				},this);//spline
-
-	}
-
-	prepareByFigure(figure){
-		if(!figure)
-			return;
-		this.prepareLinesByFigure(figure);
-		figure.figures.forEach( (nested_figure, iNestedFigure) => {
-			this.prepareByFigure(nested_figure);
-		}, this);
-	}
-
-	prepare(){
-
-		this.rows = new Array(this.canvas.height);
-		for(let i=0; i<this.rows.length; i++)
-			this.rows[i]={
-				lines:[],
-			};
-		this.currLines=[];
-		const line_length=10;
-
-		this.content.layers.forEach( (layer, iLayer) => {
-			layer.figures.forEach( (figure, iFigure) => {
-				this.prepareByFigure(figure);
-			},this);//figure
-		},this);//layer
-	}
-
-	prepare_vert(y){
-		//sort lines by y:
-		this.rows[y].lines.sort((line1,line2)=>{ return line1.x-line2.x});
-
-		//adding of curr lines:
-		this.rows[y].lines.forEach( function(line, index) {
-			if(line.top || line.left)
-				this.currLines.push(line.line);
-			if(line.bottom){
-				let iDel=this.currLines.indexOf(line.line);
-				if(iDel>=0)
-					this.currLines.splice(iDel, 1);
-			};
-		},this);
-
-
-		//find crosses by row y
-		this.crosses = this.currLines.map((line, index)=>{
-			let coeff;
-			let calced_x;
-
-			if( Math.round(line.dot1.y)==Math.round(line.dot2.y) )
-				coeff=0.5;
-			else
-				coeff = (y-line.dot1.y)/ (line.dot2.y-line.dot1.y);
-			calced_x = line.dot1.x + (line.dot2.x-line.dot1.x) * coeff;
-
-			return {
-				line:line,
-				x:Math.round(calced_x),
-				left_x:Math.round(calced_x-line.width_x/2),
-				right_x:Math.round(calced_x+line.width_x/2),
-				//curve:,
-			};
-		}, this);
-		this.crosses.sort((cross1,cross2)=>{ return cross1.x-cross2.x });
-
-		//curves:
-		this.row_curves=[];
-		this.crosses.forEach( (cross, index)=>{
-			let spline_curves = cross.line.spline.curves;
-			if(index==0){
-				this.row_curves.push(...spline_curves);
-				cross.next_curve = spline_curves[0];
-			}
-			else{
-				spline_curves.forEach( function(spline_curve, index) {
-					// statements
-					let i = this.row_curves.indexOf(spline_curve);
-					if(i<0){
-						cross.next_curve = spline_curve;//open new
-						this.row_curves.push(spline_curve);
-					}
-					else{
-						//if(spline_curve!=cross.next_curve){
-						if(index==0 || Math.abs( this.crosses[index-1].right_x - cross.left_x )>5 ){//????????????
-							cross.last_curve = spline_curve;//close old
-							this.row_curves.splice(i, 1);
-						};
-					};
-				},this);
-			};
-
-		},this);
-		//clean upper crosses:
-		for (let i = this.crosses.length - 1; i >= 0; i--) {
-			if(this.crosses[i].line.dot1.y<y && this.crosses[i].line.dot2.y<y)
-				this.crosses.splice(i,1);
-		};
-
-		//deleting of old curr lines:
-		this.rows[y].lines.forEach( function(line, index) {
-			if(line.right){
-				let iDel=this.currLines.indexOf(line.line);
-				if(iDel>=0)
-					this.currLines.splice(iDel, 1);
-			};
-		},this);
-
-		this.index_x=-1;
-		this.row_curves=[];
-	}
-
-	prepare_horiz(x){
-		if(this.is_line && this.index_x>=0 && this.crosses[this.index_x].right_x == x){
-			if(this.crosses[this.index_x].next_curve)
-				this.row_curves.push( this.crosses[this.index_x].next_curve );
-		};
-		this.is_line=(this.index_x>=0 && this.crosses[this.index_x].right_x >= x);
-		while((this.index_x+1<this.crosses.length) && (this.crosses[this.index_x+1].left_x <= x)){
-			this.index_x++;
-			//Curves that are bounded by these lines
-			//this.crosses[this.index_x+1].curve
-			let iCurve = this.row_curves.indexOf(this.crosses[this.index_x].last_curve);
-			if(iCurve>=0)
-				this.row_curves.splice(iCurve, 1);//не обов'язково стек
-			this.is_line=true;
-		};
-	}
-
-	prepare_color(x,y){
-		let rgba=[0,0,0,155];
-		if(this.is_line)
-			rgba=[230,190,80,55];
-		else if (this.row_curves.length>0) {
-			let i=this.row_curves.length;
-			i--;
-			if(i>=0)
-				rgba=this.row_curves[i].color;
-		}
-		if(!rgba)
-			rgba=[0,0,0,155];
-		return rgba;
-	}
-
-
-	//applications
-	paintPoint(point,rgba){
-			let x=Math.round(point.x);
-			let y=Math.round(point.y);
-			this.canvas.setRGB(x,y,rgba);
-	}
-
-	paintBezier(aDot, color){//PixelColor color
-		let rgba=Array.isArray(color)?color:color.toArray();
-
-		let oldPoint, newPoint=aDot[0];
-		let c=0;
-		for(let i=1;i<aDot.length;i++)
-			c+=distance(aDot[i-1].x,aDot[i-1].y,aDot[i].x,aDot[i].y);
-
-		for(let i=1; i<=c; i++){
-			oldPoint = newPoint;
-			newPoint = Spline.findInterimBezierPoint(aDot, i/c);
-			this.paintPoint(newPoint,rgba);
-		};
-		//this.canvas.put();
-	}
-
-	//context:
-
-	stroke(color){
-		let ctx = this.canvas.ctx;
-		let strokeStyle = ctx.strokeStyle
-		ctx.strokeStyle = color;
-		ctx.stroke();
-		ctx.strokeStyle = strokeStyle;
-	}
-
-	paintFigureRect(figure, color){
-		if(!figure || !figure.rect)
-			return;
-		let points = figure.rectPoints;
-		let ctx = this.canvas.ctx;
-		ctx.beginPath();
-		ctx.moveTo(points[3].x, points[3].y);
-		points.forEach(p=>ctx.lineTo(p.x, p.y));
-		this.stroke(color);
-	}
-
-	paintEllipse(point, color, radius=1){
-		let ctx = this.canvas.ctx;
-		ctx.beginPath();
-		ctx.arc(point.x, point.y, radius, 0, Math.PI*2, true);
-		this.stroke(color);
-	}
-
-	paintLine(point1, point2, color){
-		let ctx = this.canvas.ctx;
-		ctx.beginPath();
-		ctx.moveTo(point1.x, point1.y);
-		ctx.lineTo(point2.x, point2.y);
-		this.stroke(color);
-	}
-
-};
 
 
 class Picture{
 
 	constructor(canvas=null){
 		this.canvas=canvas;
-		this.content = {
-			layers : [],
-		};
 		this.editor = new Editor(this);
-		this.render = new Render(this, this.canvas);
+		this.editor.newContent();
+		this.render = new PictureRender(this.content, this.canvas);
 	}
 
 	setCanvas(canvas){
@@ -906,6 +581,7 @@ class Picture{
 	}
 
 	paint(rect=null){
+		this.render.content=this.content;
 		this.render.paint(this.canvas, rect);
 	}
 

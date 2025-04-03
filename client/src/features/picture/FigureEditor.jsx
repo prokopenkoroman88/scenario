@@ -486,7 +486,7 @@ class FigureEditor extends React.Component{
 
 		function paintBranch(branch, figure){
 			let radius=accent=='curr'?4:2;
-			render.paintLine(branch.nodes[0], branch.nodes[1], colorNode);
+			render.paintLine([branch.nodes[0], branch.nodes[1]], colorNode);
 		}
 
 		function paintRotor(rotor){
@@ -498,8 +498,8 @@ class FigureEditor extends React.Component{
 			render.paintEllipse(lever, colorRotor, 2);
 			render.paintLine(rotor, lever, colorRotor);
 			//
-			rotor.points.forEach(point=>render.paintLine(rotor, point, colorRotor));
-			rotor.rotors.forEach(rotor2=>render.paintLine(rotor, rotor2, colorRotor));
+			rotor.points.forEach(point=>render.paintLine([rotor, point], colorRotor));
+			rotor.rotors.forEach(rotor2=>render.paintLine([rotor, rotor2], colorRotor));
 		}
 
 		function paintSpline(spline){
@@ -512,7 +512,7 @@ class FigureEditor extends React.Component{
 			})
 			//важелі сплайну
 			for(let i=0; i<=1; i++)
-				render.paintLine(spline.controlPoint[i], spline.leverPoint[i], colorPoint);
+				render.paintLine([spline.controlPoint[i], spline.leverPoint[i]], colorPoint);
 		}
 
 		function figureRect(figure){

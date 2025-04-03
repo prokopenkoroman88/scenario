@@ -7,7 +7,7 @@ class CustomCanvas {
 	static newImage(src){
 		let img = new Image();
 		//canvas.crossOrigin = 'anonymous';//?
-		img.src = src;//'images/units/man.bmp';
+		img.src = src;
 		return img;
 	}
 
@@ -42,24 +42,20 @@ class CustomCanvas {
 	setRGB(x,y,rgba){
 		x=Math.round(x);
 		y=Math.round(y);
-		//if (this.pointSect(x,y)!=8) return;
+		if (this.pointSect(x,y)!=8) return;
 		let i = (y*this.width+x) * 4;
-		//this.imageData.data.splice(i, 4, rgba);
 		for(let j=0; j<4; j++)
-		this.data[i+j]=rgba[j];//rgba=[r,g,b,a]//.imageData.data[i+j]
-		//console.log(x, y, i, rgba[0], this.imageData.data[i+0]);
-
+			this.data[i+j]=rgba[j];
 	}
 
 	getRGB(x,y){
 		x=Math.round(x);
 		y=Math.round(y);
-		//if (this.pointSect(x,y)!=8) return [0,0,0,0];
+		if (this.pointSect(x,y)!=8) return [0,0,0,0];
 		let rgba=[];
 		let i = (y*this.width+x) * 4;
-		//this.imageData.data.splice(i, 4, rgba);
 		for(let j=0; j<4; j++)
-		rgba.push(this.data[i+j]);//rgba=[r,g,b,a]
+			rgba.push(this.data[i+j]);//rgba=[r,g,b,a]
 		return rgba;
 	}
 
@@ -74,55 +70,36 @@ class CustomCanvas {
 
 
 
-	paintRect(x,y,w,h,rgba){//+16.7.21
+	paintRect(x,y,w,h,rgba){
 		for(let i=0; i<h; i++)
 			for(let j=0; j<w; j++)
 				this.setRGB(x+j, y+i, rgba);
 	}
 
 
-	applMap(x,y, cm){//(x,y, ColorMap cm)
+	applMap(x,y, cm){
 		let h=cm.height;
 		let w=cm.width;
-		console.log('applMap',h,w, x, y);
 		for(let i=0; i<h; i++)
 			for(let j=0; j<w; j++){
-				//let rgba=cm.getRGB(j,i);
-				//this.setRGB(x+j, y+i, rgba);
-			
-				//if (i>5 && i<15 && j>10 && j<30)
-				//console.log(x,j,y,i,rgba, this.getRGB(x+j, y+i));//rgba
 				this.setRGB(x+j, y+i, cm.getRGB(j,i));
 			}
 	}
 
-	applMapFast(x,y, cm){//(x,y, ColorMap cm)
+	applMapFast(x,y, cm){
 		let h=cm.height;
 		let w=cm.width;
 		for(let i=0; i<h; i++){
 			let i0= ((y+i)*this.width+x) * 4;
 			let i1= i*w*4;
 			for(let j=0; j<w*4; j++)
-				//this.setRGB(x+j, y+i, cm.getRGB(j,i));
-				//this.data[ i0 + j ] = cm.data[ i1 + j ];
 				this.data[ i0++ ] = cm.data[ i1++ ];
 		};
 	}
 
 
 
-	appl(cm, kuda={}, from={}){//(x,y, ColorMap cm)
-
-
-		if(kuda=={}){
-			kuda.x=0;
-			kuda.y=0;
-		};
-
-		if(from=={}){
-			from.x=0;
-			from.y=0;
-		};
+	appl(cm, to={x:0, y:0}, from={x:0, y:0}){
 		if(!from.w)from.w=cm.width;
 		if(!from.h)from.h=cm.height;
 
@@ -131,7 +108,7 @@ class CustomCanvas {
 
 		for(let i=0; i<h; i++)
 			for(let j=0; j<w; j++)
-				this.setRGB(kuda.x+j, kuda.y+i, cm.getRGB(from.x+j,from.y+i));
+				this.setRGB(to.x+j, to.y+i, cm.getRGB(from.x+j,from.y+i));
 	}
 
 
@@ -163,21 +140,17 @@ class VirtualCanvas extends CustomCanvas{
 	}
 
 
-	clone(from={}){
-		if(from=={}){
-			from.x=0;
-			from.y=0;
-		};
+	clone(from={x:0, y:0}){
 		if(from.w)from.w=cm.width;
 		if(from.h)from.h=cm.height;
 
 		let h=from.h;
 		let w=from.w;
 
-		let kuda={x:0,y:0};
+		let to={x:0,y:0};
 
 		let cm = new VirtualCanvas(h,w);
-		cm.appl(this, kuda, from);
+		cm.appl(this, to, from);
 		return cm;
 	}
 
@@ -203,6 +176,8 @@ class RealCanvas extends CustomCanvas{
 		if(typeof canvas === 'object'){
 			this.canvasRef = canvas;
 			this.canvas = this.canvasRef.current;
+			if(canvas.constructor.name=='HTMLCanvasElement')
+				this.canvas=canvas;
 		}
 		else
 		if(typeof canvas === 'string'){
@@ -233,21 +208,17 @@ class RealCanvas extends CustomCanvas{
 	}
 
 
-	clone(from={}){
-		if(from=={}){
-			from.x=0;
-			from.y=0;
-		};
+	clone(from={x:0, y:0}){
 		if(from.w)from.w=cm.width;
 		if(from.h)from.h=cm.height;
 
 		let h=from.h;
 		let w=from.w;
 
-		let kuda={x:0,y:0};
+		let to={x:0,y:0};
 
 		let cm = new VirtualCanvas(h,w);
-		cm.appl(this, kuda, from);
+		cm.appl(this, to, from);
 		return cm;
 	}
 
@@ -257,12 +228,39 @@ class RealCanvas extends CustomCanvas{
 	}
 
 
-	applImage(img,kuda){
-		console.log('kuda:');
-		console.log(kuda);
-		this.ctx.drawImage(img, kuda.x, kuda.y);//?//, kuda.w, kuda.h);
+	applImage(img,to){
+		this.ctx.drawImage(img, to.x, to.y);//?//, to.w, to.h);
 	}
 
+
+	//context:
+
+	stroke(color){
+		let strokeStyle = this.ctx.strokeStyle
+		this.ctx.strokeStyle = color;
+		this.ctx.stroke();
+		this.ctx.strokeStyle = strokeStyle;
+	}
+
+	paintEllipse(point, color, radius=1){
+		if(!point)
+			return;
+		this.ctx.beginPath();
+		this.ctx.arc(point.x, point.y, radius, 0, Math.PI*2, true);
+		this.stroke(color);
+	}
+
+	paintLine(points, color){
+		if(!points || points.length<2)
+			return;
+		if(!points[0])
+			return;
+		this.ctx.beginPath();
+		this.ctx.moveTo(points[0].x, points[0].y);
+		for(let i=1; i<points.length; i++)
+			this.ctx.lineTo(points[i].x, points[i].y);
+		this.stroke(color);
+	}
 
 }
 
