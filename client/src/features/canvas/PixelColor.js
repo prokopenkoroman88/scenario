@@ -5,13 +5,14 @@ export default class PixelColor {
 	a=255;
 	constructor(color){
 
+		let rgba=PixelColor.colorToArray(color);
+		this.fromArray(rgba);
+	}
+
+	static colorToArray(color){
 		if(Array.isArray(color)){
 			if(color.length == 3 || color.length == 4 ){
-				this.r=color[0];
-				this.g=color[1];
-				this.b=color[2];
-				if(color[3])
-					this.a=color[3];
+				return color;
 			}
 		}
 		else{
@@ -21,7 +22,7 @@ export default class PixelColor {
 				ctx.fillStyle = color;//>=Edge9.0
 	 			color = ctx.fillStyle;//'DodgerBlue'  =>  '#1e90ff'
 	 		};
-			this.encodeColor(parseInt(color.substring(1,3),16), parseInt(color.substring(3,5),16), parseInt(color.substring(5,7),16));
+			return PixelColor.encodeColor(parseInt(color.substring(1,3),16), parseInt(color.substring(3,5),16), parseInt(color.substring(5,7),16));
 		};
 
 	}
@@ -34,12 +35,17 @@ export default class PixelColor {
 		return value;
 	}
 
+	static encodeColor(r,g,b,a=255){
+		return [
+			PixelColor.normByte(r),
+			PixelColor.normByte(g),
+			PixelColor.normByte(b),
+			PixelColor.normByte(a)
+		];
+	}
 
 	encodeColor(r,g,b,a=255){
-		this.r=PixelColor.normByte(r);
-		this.g=PixelColor.normByte(g);
-		this.b=PixelColor.normByte(b);
-		this.a=PixelColor.normByte(a);
+		this.fromArray(PixelColor.encodeColor(r,g,b,a));
 		//console.log(this);
 		return this;
 	}
@@ -82,6 +88,24 @@ export default class PixelColor {
 		return [this.r, this.g, this.b, this.a];
 	}
 
+	fromArray(rgba){
+		if(rgba.length == 3 || rgba.length == 4 ){
+			this.r=PixelColor.normByte(rgba[0]);
+			this.g=PixelColor.normByte(rgba[1]);
+			this.b=PixelColor.normByte(rgba[2]);
+			this.a=PixelColor.normByte(rgba[3]!==undefined?rgba[3]:255);
+		};
+	}
+
+	mix(rgba){
+		let rgba0 = this.toArray();
+		let coeff=rgba[3]/255;//transparancy
+		for(let i=0; i<3; i++)
+			rgba0[i] += (rgba[i]-rgba0[i])*coeff;//Angle.grow()
+		rgba0[3]=Math.max(rgba0[3], rgba[3]);
+		this.fromArray(rgba0);
+	}
+
 	static calcAverage(rgba){//[0..255]
 		return (rgba[0]+rgba[1]+rgba[2])/3;
 	}
@@ -117,6 +141,56 @@ export default class PixelColor {
 		return hue % 1530;
 	}
 
+	static calcHSL(rgba){
+		//https://www.rapidtables.com/convert/color/rgb-to-hsl.html
+		let r = rgba[0]/255;
+		let g = rgba[1]/255;
+		let b = rgba[2]/255;
+		let minC = Math.min(r,g,b);
+		let maxC = Math.max(r,g,b);
+		let dltC = maxC-minC;
+		let brightness = (maxC+minC)/2;
+		let contrast = 0;
+		if(brightness>0 && brightness<1)
+			contrast = dltC/(1-Math.abs(2*brightness-1));
+		let hue = 0;
+		if(dltC){
+			if(Math.abs(maxC-r)<0.001)
+				hue = (((g-b)/dltC)%6)*(Math.PI/3);
+			if(Math.abs(maxC-g)<0.001)
+				hue = (((b-r)/dltC)+2)*(Math.PI/3);
+			if(Math.abs(maxC-b)<0.001)
+				hue = (((r-g)/dltC)+4)*(Math.PI/3);
+			if(hue<0)
+				hue+=Math.PI*2;
+		};
+		return {brightness, contrast, hue};
+	}
+
+	static calcRGB(brightness,contrast,hue){
+		//https://www.rapidtables.com/convert/color/hsl-to-rgb.html
+		let c = (1-Math.abs(2*brightness-1))*contrast;
+		let x = c*(1-Math.abs( (hue/(Math.PI/3))%2 -1 ));
+		let m = brightness - c/2;
+
+		let sector = Math.floor(hue/(Math.PI/3));//0..5
+		let r1=0, g1=0, b1=0;
+		switch (sector) {
+			case 0: r1=c; g1=x; break;
+			case 1: r1=x; g1=c; break;
+			case 2: g1=c; b1=x; break;
+			case 3: g1=x; b1=c; break;
+			case 4: r1=x; b1=c; break;
+			case 5: r1=c; b1=x; break;
+			default: break;
+		}
+		let r = Math.min(255,Math.round((r1+m)*255));
+		let g = Math.min(255,Math.round((g1+m)*255));
+		let b = Math.min(255,Math.round((b1+m)*255));
+		let rgba =[r,g,b,255];
+		return rgba;
+	}
+
 	getBrightness(){//Яркость [0..1] снизу вверх
 		return PixelColor.calcBrightness(this.toArray())/255;
 	}
@@ -130,11 +204,12 @@ export default class PixelColor {
 	}
 
 	getColorCoords(){
-		let radius = this.getContrast();
+		let hsl = PixelColor.calcHSL(this.toArray());
+		let radius = hsl.contrast;
 		return {
-			x:Math.sin(this.getHue())*radius, 
-			y:Math.cos(this.getHue())*radius, 
-			z:this.getBrightness()*2-1
+			x:Math.sin(hsl.hue)*radius,
+			y:Math.cos(hsl.hue)*radius,
+			z:hsl.brightness*2-1
 		};
 		//x:[-1..1], y:[-1..1], z:[-1..1]
 	}

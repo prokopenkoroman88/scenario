@@ -1,17 +1,6 @@
-const MAX_COORD=10000;
+import CustomRect from './../../../../custom/CustomRect.js'
 
-export default class Rect{
-
-	constructor(){
-		this.reset();
-	}
-
-	reset(){
-		this.left=MAX_COORD;
-		this.right=-MAX_COORD;
-		this.top=MAX_COORD;
-		this.bottom=-MAX_COORD;
-	}
+export default class Rect extends CustomRect{
 
 	correct(point){
 		if(this.left>point.x)
