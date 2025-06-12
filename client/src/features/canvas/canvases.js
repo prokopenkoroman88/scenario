@@ -68,7 +68,38 @@ class CustomCanvas {
 		return new PixelColor(rgba);
 	}
 
-
+	line(from={x:0,y:0}, to={x:0,y:0}, color, opacity=1){
+		if(!opacity)
+			return;
+		let rgba=color;
+		if(!Array.isArray(rgba)){
+			let pixel = new PixelColor(color);
+			rgba=pixel.toArray();
+		};
+		let lineHeight=Math.abs(to.y-from.y);//+1
+		let lineWidth=Math.abs(to.x-from.x);//+1
+		let lineLength=lineHeight>lineWidth?lineHeight:lineWidth;
+		if(!lineLength)
+			return;
+		let di=(to.y-from.y)/lineLength;//+1
+		let dj=(to.x-from.x)/lineLength;//+1
+		for(let k=0; k<lineLength; k++){
+			let i=Math.round(from.y+k*di);
+			let j=Math.round(from.x+k*dj);
+			if( (i<0)||(i>=this.height)||(j<0)||(j>=this.width) )
+				continue;
+			if(opacity<1){
+				let rgbaOld=this.getRGB(j,i);
+				let rgbaNew=rgbaOld.map((value, index)=>
+					value + (rgba[index]-value)*opacity
+				);
+				rgbaNew=PixelColor.encodeColor(...rgbaNew);
+				this.setRGB(j,i,rgbaNew);
+			}
+			else
+				this.setRGB(j,i,rgba);
+		}
+	}
 
 	paintRect(x,y,w,h,rgba){
 		for(let i=0; i<h; i++)
