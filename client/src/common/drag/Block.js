@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom'
 
 import Caption from './Caption.js'
 
+import styles from './../drag/styles.css';
+
 class Block extends React.Component{
 	constructor(props){
 		super(props);
@@ -13,9 +15,40 @@ class Block extends React.Component{
 		this.state={
 			rect:props.rect,
 		};
-		this.className=this.props.css?this.props.css.className:'oval';
-		this.styles=this.props.css?this.props.css.styles:{};
-		this.level=this.props.css?this.props.css.level:0;
+//		this.className=this.props.css?this.props.css.className:'oval';
+//		this.styles=this.props.css?this.props.css.styles:{};
+//		this.level=this.props.css?this.props.css.level:0;
+	}
+
+	get className(){return this.props.css?this.props.css.className:'oval';}
+	get styles(){return this.props.css?this.props.css.styles:{};}
+	get level(){return this.props.css?this.props.css.level:0;}
+
+
+	handleMouseDown(event){
+		//console.log('handleMouseDown', this.props.drag);
+		if(this.props.drag && this.props.drag.onBlockMouseDown)
+			this.props.drag.onBlockMouseDown(event, this);
+	}
+
+	handleMouseMove(event){
+		//console.log('handleMouseMove', this.props.drag.drag, this.props.drag.drag.tag);
+		if(this.props.drag && this.props.drag.onBlockMouseMove)////////???????????
+			this.props.drag.onBlockMouseMove(event, this);
+	}
+
+	handleMouseUp(event){
+		if(this.props.drag && this.props.drag.onBlockMouseUp)////////???????????
+			this.props.drag.onBlockMouseUp(event, this);
+	}
+
+
+////
+
+	afterDrag(){
+		//console.log('afterDrag', this.props.afterDrag);
+		if(this.props.afterDrag)
+			this.props.afterDrag(this.state.rect);
 	}
 
 	getClass(){
@@ -42,6 +75,9 @@ class Block extends React.Component{
 			<div
 				className={this.getClass()}
 				style={this.getStyle()} 
+				onMouseDown={this.handleMouseDown.bind(this)}
+				onMouseMove={this.handleMouseMove.bind(this)}
+				onMouseUp={this.handleMouseUp.bind(this)}
 			>
 				<Caption
 					block={this}

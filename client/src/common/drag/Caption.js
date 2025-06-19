@@ -12,8 +12,25 @@ class Caption extends React.Component{
 	}
 
 	handleMouseDown(event){
+		//console.log('handleMouseDown', this.props.drag);
+		if(this.props.drag && this.props.drag.onCaptionMouseDown)
+			this.props.drag.onCaptionMouseDown(event, this.props.block);
+/*
 		if(this.props.drag)
 			this.props.drag.startDrag(event, this.props.block);
+//*/
+	}
+
+	handleMouseMove(event){
+		//console.log('handleMouseMove', this.props.drag);
+		if(this.props.drag && this.props.drag.onCaptionMouseMove)
+			this.props.drag.onCaptionMouseMove(event);
+	}
+
+	handleMouseUp(event){
+		//console.log('handleMouseUp', this.props.drag);
+		if(this.props.drag && this.props.drag.onCaptionMouseUp)
+			this.props.drag.onCaptionMouseUp(event);
 	}
 
 	getClass(){
@@ -21,44 +38,22 @@ class Caption extends React.Component{
 		return className;
 	}
 
+	getTag(level){
+		let Tag='div';
+		if(level>=1 && level<=6)
+			Tag=`h${level}`;
+		return Tag;
+	}
+
 	render(){
-		switch (this.props.level) {
-			case 1: return (
-				<h1
-					className={this.getClass()}
-					onMouseDown={this.handleMouseDown.bind(this)}
-				>{this.props.children}</h1>);
-			case 2: return (
-				<h2
-					className={this.getClass()}
-					onMouseDown={this.handleMouseDown.bind(this)}
-				>{this.props.children}</h2>);
-			case 3: return (
-				<h3
-					className={this.getClass()}
-					onMouseDown={this.handleMouseDown.bind(this)}
-				>{this.props.children}</h3>);
-			case 4: return (
-				<h4
-					className={this.getClass()}
-					onMouseDown={this.handleMouseDown.bind(this)}
-				>{this.props.children}</h4>);
-			case 5: return (
-				<h5
-					className={this.getClass()}
-					onMouseDown={this.handleMouseDown.bind(this)}
-				>{this.props.children}</h5>);
-			case 6: return (
-				<h6
-					className={this.getClass()}
-					onMouseDown={this.handleMouseDown.bind(this)}
-				>{this.props.children}</h6>);
-			default: return (
-				<div
-					className={this.getClass()}
-					onMouseDown={this.handleMouseDown.bind(this)}
-				>{this.props.children}</div>);
-		}
+		const Tag=this.getTag(this.props.level);
+		return (
+			<Tag
+				className={this.getClass()}
+				onMouseDown={this.handleMouseDown.bind(this)}
+				onMouseMove={this.handleMouseMove.bind(this)}
+				onMouseUp={this.handleMouseUp.bind(this)}
+			>{this.props.children}</Tag>);
 	}
 }
 

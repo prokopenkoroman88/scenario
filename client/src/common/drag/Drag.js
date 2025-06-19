@@ -29,4 +29,46 @@ export default class Drag {
 		this.drag.tag=null;
 	}
 
+	//custom configuration:
+	onCaptionMouseDown(event, block){
+		this.startDrag(event, block)
+	}
+
+	onCaptionMouseMove(event){
+		//override
+	}
+
+	onCaptionMouseUp(event){
+		//override
+	}
+
+
+	onBlockMouseDown(event, block){
+		if(this.onBlockChoice)
+			this.onBlockChoice(event, block);
+	}
+
+	onBlockMouseMove(event, block){
+		//override
+	}
+
+	onBlockMouseUp(event, block){
+		//override
+	}
+
+
+	onContainerMouseDown(event){
+		//override
+	}
+
+	onContainerMouseMove(event){
+		this.doDrag(event);
+	}
+
+	onContainerMouseUp(event){
+		if(this.afterDrag)
+			this.afterDrag(event, this.drag.tag);
+		this.endDrag();
+	}
+
 }
