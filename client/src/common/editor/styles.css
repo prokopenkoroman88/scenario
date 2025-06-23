@@ -1,0 +1,148 @@
+
+
+.App{
+	height:100%;
+}
+
+
+/*CustomCascadeEditor*/
+.cascade.editor{
+	border: 2px solid lime;
+	min-height:100%;
+	height: 100%;
+	/*position: relative;*/
+}
+
+.cascade.editor > .main-with-asides{
+	height: 90%;
+	display: block;/*???????????*/
+}
+
+.cascade.editor > .main-with-asides > .main{
+	height: 100%;
+}
+
+.tabulator{
+	height:100%;
+}
+.tab-captions{
+	text-align: left;
+/*	border-bottom: 2px lightgray outset;*/
+	padding-left: 10px;
+}
+.tab-caption{
+	display: inline-block;
+	background: #282923;
+	color: lightgray;
+	padding: 2px 10px;
+	border-style:outset;
+	border-color:ltgray;
+	border-width: 2px 2px 0px 2px;
+	border-top-left-radius: 20px;
+	border-top-right-radius: 20px;
+	margin-right:-5px;
+}
+
+.tab-caption>button{
+	background: red;
+	color:white;
+	display: inline-block;
+	width:18px;
+	height:18px;
+	padding: 0px;
+	border-radius: 50%;
+}
+
+.tab-caption.active{
+	background: lightgray;
+	color:black;
+}
+
+.tab-pages{
+	border: 2px inset lightgray;
+	overflow: scroll;
+	max-height: 90%;
+}
+
+.tab-page{
+	display: none;
+}
+
+.tab-page.active{
+	display: block;
+}
+
+/*
+	renderTabs(){
+		return (
+			<div className='tabulator'>
+
+				<div className='tab-captions'>
+				{(this.pages.length) && this.pages.map((page, index)=>
+					<div className='tab-caption'>
+						<span
+							onClick={(()=>{  console.log('tab', index, page.caption);      }).bind(this)}
+						>{page.caption}</span>
+						<button
+							onClick={(()=>{  console.log('X', index, page.caption);      }).bind(this)}
+						>x</button>
+					</div>
+				)}
+				</div>
+
+				<div className='tab-pages'>
+				{(this.pages.length) && this.pages.map((page, index)=>
+					<div className='tab-page'>
+						{page.render(index)}
+					</div>
+				)}
+				</div>
+
+			</div>
+		);
+	}
+*/
+
+
+
+.panel{
+	display: flex;
+}
+
+.panel.horiz{
+	flex-direction: row;
+}
+
+.panel.vert{
+	flex-direction: column;
+}
+
+.panel.center{
+	justify-content : center;
+}
+
+
+.main-with-asides{
+	display: flex;
+	flex-direction: row;
+}
+
+.main-with-asides .panel.inline-block{
+	display: inline-block;
+}
+
+.main-with-asides .panel.vert{
+	align-items: stretch;
+}
+
+.main-with-asides>.left{
+	width: var(--left-panel-width);
+}
+
+.main-with-asides>.right{
+	width: var(--right-panel-width);
+}
+
+.main-with-asides>.main{
+	width: calc(100% - var(--left-panel-width) - var(--right-panel-width) - 5px);
+}

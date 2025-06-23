@@ -1,0 +1,46 @@
+.menu span{
+	color:white;
+	padding: 2px 5px;
+}
+
+ul.menu{
+	text-align: left;
+}
+
+.menu ul{
+	display: none;
+	position: absolute;
+}
+
+
+.menu>li{
+/**/
+	display: inline-block;
+}
+
+.menu>li>ul{
+	left:0px;
+}
+
+.menu>li>ul ul{
+	left:100%;
+	top:0%;
+}
+
+
+.menu li{
+	position: relative;
+	background: gray;
+}
+
+.menu li:hover{
+	background: blue;
+}
+
+.menu li:hover > ul{
+	display: block;
+}
+
+footer{
+	border: 2px solid red;
+}
